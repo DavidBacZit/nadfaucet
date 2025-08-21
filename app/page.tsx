@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { MiningManager } from "@/lib/mining-manager"
 import { FaucetApiClient } from "@/lib/api-client"
-
+import { SpeedInsights } from "@vercel/speed-insights/next"
 export default function PoWFaucetPage() {
   // State management
   const [address, setAddress] = useState("")
