@@ -11,12 +11,11 @@ import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { MiningManager } from "@/lib/mining-manager"
 import { FaucetApiClient } from "@/lib/api-client"
-import { SpeedInsights } from "@vercel/speed-insights/next"
 export default function PoWFaucetPage() {
   // State management
   const [address, setAddress] = useState("")
   const [hashRate, setHashRate] = useState(1)
-  const [maxWorkers, setMaxWorkers] = useState(64) // Default server-safe value
+  const [maxWorkers, setMaxWorkers] = useState(8) // Reasonable default limit
   const [isRunning, setIsRunning] = useState(false)
   const [balance, setBalance] = useState(0)
   const [currentBlock, setCurrentBlock] = useState(0)
@@ -100,7 +99,7 @@ export default function PoWFaucetPage() {
 
   useEffect(() => {
     if (typeof navigator !== "undefined" && navigator.hardwareConcurrency) {
-      setMaxWorkers(navigator.hardwareConcurrency)
+      setMaxWorkers(Math.min(navigator.hardwareConcurrency, 8))
     }
   }, [])
 
@@ -229,7 +228,7 @@ export default function PoWFaucetPage() {
       <div className="mx-auto max-w-6xl space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-foreground">$MON faucet</h1>
+          <h1 className="text-3xl font-bold text-foreground">$NF faucet</h1>
           <div className="flex items-center justify-center gap-2">
             <div
               className={`w-2 h-2 rounded-full ${connectionStatus.checking ? "bg-yellow-500" : connectionStatus.connected ? "bg-green-500" : "bg-red-500"}`}
@@ -355,14 +354,9 @@ export default function PoWFaucetPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Time Left:</span>
-                  <span className="font-mono">{(timeLeft / 1000).toFixed(1)}s</span>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span>Block Progress</span>
-                    <span>{Math.max(0, 100 - (timeLeft / 400) * 100).toFixed(0)}%</span>
-                  </div>
-                  <Progress value={Math.max(0, 100 - (timeLeft / 400) * 100)} className="h-2" />
+                  <span className="font-mono">
+                    {connectionStatus.connected ? `${(timeLeft / 1000).toFixed(1)}s` : "40000s"}
+                  </span>
                 </div>
               </div>
 
@@ -370,15 +364,16 @@ export default function PoWFaucetPage() {
 
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Pool A Reward:</span>
+                  <span className="text-sm text-muted-foreground">Lucky Winner:</span>
                   <span>50 tokens</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Pool B Reward:</span>
+                  <span className="text-sm text-muted-foreground">Shared Pool:</span>
                   <span>50 tokens</span>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Pool A: Proportional by shares • Pool B: Weighted lottery
+                  1 lucky winner gets 50 tokens • Remaining 50 tokens shared proportionally (more workers = higher
+                  winning rate)
                 </div>
               </div>
             </CardContent>

@@ -26,11 +26,8 @@ importers:
       '@radix-ui/react-slot':
         specifier: latest
         version: 1.2.3(@types/react@19.0.0)(react@19.0.0)
-      '@sveltejs/kit':
-        specifier: latest
-        version: 2.36.1(@sveltejs/vite-plugin-svelte@6.1.3(svelte@5.38.2)(vite@7.1.3(@types/node@22.0.0)(jiti@2.5.1)(lightningcss@1.30.1)(yaml@2.8.1)))(svelte@5.38.2)(vite@7.1.3(@types/node@22.0.0)(jiti@2.5.1)(lightningcss@1.30.1)(yaml@2.8.1))
       '@vercel/speed-insights':
-        specifier: latest
+        specifier: 1.2.0
         version: 1.2.0(@sveltejs/kit@2.36.1(@sveltejs/vite-plugin-svelte@6.1.3(svelte@5.38.2)(vite@7.1.3(@types/node@22.0.0)(jiti@2.5.1)(lightningcss@1.30.1)(yaml@2.8.1)))(svelte@5.38.2)(vite@7.1.3(@types/node@22.0.0)(jiti@2.5.1)(lightningcss@1.30.1)(yaml@2.8.1)))(next@15.2.4(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)(svelte@5.38.2)(vue-router@4.5.1(vue@3.5.19(typescript@5.0.2)))(vue@3.5.19(typescript@5.0.2))
       autoprefixer:
         specifier: ^10.4.20
@@ -77,9 +74,6 @@ importers:
       react-dom:
         specifier: ^19
         version: 19.0.0(react@19.0.0)
-      svelte:
-        specifier: latest
-        version: 5.38.2
       tailwind-merge:
         specifier: ^2.5.5
         version: 2.5.5
@@ -92,12 +86,6 @@ importers:
       url:
         specifier: latest
         version: 0.11.4
-      vue:
-        specifier: latest
-        version: 3.5.19(typescript@5.0.2)
-      vue-router:
-        specifier: latest
-        version: 4.5.1(vue@3.5.19(typescript@5.0.2))
     devDependencies:
       '@tailwindcss/postcss':
         specifier: ^4.1.9
@@ -2437,18 +2425,22 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.30
 
-  '@babel/helper-string-parser@7.27.1': {}
+  '@babel/helper-string-parser@7.27.1':
+    optional: true
 
-  '@babel/helper-validator-identifier@7.27.1': {}
+  '@babel/helper-validator-identifier@7.27.1':
+    optional: true
 
   '@babel/parser@7.28.3':
     dependencies:
       '@babel/types': 7.28.2
+    optional: true
 
   '@babel/types@7.28.2':
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.27.1
+    optional: true
 
   '@emnapi/runtime@1.4.5':
     dependencies:
@@ -2647,6 +2639,7 @@ snapshots:
     dependencies:
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.30
+    optional: true
 
   '@jridgewell/resolve-uri@3.1.2': {}
 
@@ -2698,7 +2691,8 @@ snapshots:
   '@pkgjs/parseargs@0.11.0':
     optional: true
 
-  '@polka/url@1.0.0-next.29': {}
+  '@polka/url@1.0.0-next.29':
+    optional: true
 
   '@radix-ui/number@1.1.0': {}
 
@@ -3057,11 +3051,13 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.47.1':
     optional: true
 
-  '@standard-schema/spec@1.0.0': {}
+  '@standard-schema/spec@1.0.0':
+    optional: true
 
   '@sveltejs/acorn-typescript@1.0.5(acorn@8.15.0)':
     dependencies:
       acorn: 8.15.0
+    optional: true
 
   '@sveltejs/kit@2.36.1(@sveltejs/vite-plugin-svelte@6.1.3(svelte@5.38.2)(vite@7.1.3(@types/node@22.0.0)(jiti@2.5.1)(lightningcss@1.30.1)(yaml@2.8.1)))(svelte@5.38.2)(vite@7.1.3(@types/node@22.0.0)(jiti@2.5.1)(lightningcss@1.30.1)(yaml@2.8.1))':
     dependencies:
@@ -3081,6 +3077,7 @@ snapshots:
       sirv: 3.0.1
       svelte: 5.38.2
       vite: 7.1.3(@types/node@22.0.0)(jiti@2.5.1)(lightningcss@1.30.1)(yaml@2.8.1)
+    optional: true
 
   '@sveltejs/vite-plugin-svelte-inspector@5.0.1(@sveltejs/vite-plugin-svelte@6.1.3(svelte@5.38.2)(vite@7.1.3(@types/node@22.0.0)(jiti@2.5.1)(lightningcss@1.30.1)(yaml@2.8.1)))(svelte@5.38.2)(vite@7.1.3(@types/node@22.0.0)(jiti@2.5.1)(lightningcss@1.30.1)(yaml@2.8.1))':
     dependencies:
@@ -3090,6 +3087,7 @@ snapshots:
       vite: 7.1.3(@types/node@22.0.0)(jiti@2.5.1)(lightningcss@1.30.1)(yaml@2.8.1)
     transitivePeerDependencies:
       - supports-color
+    optional: true
 
   '@sveltejs/vite-plugin-svelte@6.1.3(svelte@5.38.2)(vite@7.1.3(@types/node@22.0.0)(jiti@2.5.1)(lightningcss@1.30.1)(yaml@2.8.1))':
     dependencies:
@@ -3103,6 +3101,7 @@ snapshots:
       vitefu: 1.1.1(vite@7.1.3(@types/node@22.0.0)(jiti@2.5.1)(lightningcss@1.30.1)(yaml@2.8.1))
     transitivePeerDependencies:
       - supports-color
+    optional: true
 
   '@swc/counter@0.1.3': {}
 
@@ -3182,9 +3181,11 @@ snapshots:
       postcss: 8.5.6
       tailwindcss: 4.1.9
 
-  '@types/cookie@0.6.0': {}
+  '@types/cookie@0.6.0':
+    optional: true
 
-  '@types/estree@1.0.8': {}
+  '@types/estree@1.0.8':
+    optional: true
 
   '@types/node@22.0.0':
     dependencies:
@@ -3214,11 +3215,13 @@ snapshots:
       entities: 4.5.0
       estree-walker: 2.0.2
       source-map-js: 1.2.1
+    optional: true
 
   '@vue/compiler-dom@3.5.19':
     dependencies:
       '@vue/compiler-core': 3.5.19
       '@vue/shared': 3.5.19
+    optional: true
 
   '@vue/compiler-sfc@3.5.19':
     dependencies:
@@ -3231,22 +3234,27 @@ snapshots:
       magic-string: 0.30.17
       postcss: 8.5.6
       source-map-js: 1.2.1
+    optional: true
 
   '@vue/compiler-ssr@3.5.19':
     dependencies:
       '@vue/compiler-dom': 3.5.19
       '@vue/shared': 3.5.19
+    optional: true
 
-  '@vue/devtools-api@6.6.4': {}
+  '@vue/devtools-api@6.6.4':
+    optional: true
 
   '@vue/reactivity@3.5.19':
     dependencies:
       '@vue/shared': 3.5.19
+    optional: true
 
   '@vue/runtime-core@3.5.19':
     dependencies:
       '@vue/reactivity': 3.5.19
       '@vue/shared': 3.5.19
+    optional: true
 
   '@vue/runtime-dom@3.5.19':
     dependencies:
@@ -3254,21 +3262,25 @@ snapshots:
       '@vue/runtime-core': 3.5.19
       '@vue/shared': 3.5.19
       csstype: 3.1.3
+    optional: true
 
   '@vue/server-renderer@3.5.19(vue@3.5.19(typescript@5.0.2))':
     dependencies:
       '@vue/compiler-ssr': 3.5.19
       '@vue/shared': 3.5.19
       vue: 3.5.19(typescript@5.0.2)
+    optional: true
 
-  '@vue/shared@3.5.19': {}
+  '@vue/shared@3.5.19':
+    optional: true
 
   accepts@2.0.0:
     dependencies:
       mime-types: 3.0.1
       negotiator: 1.0.0
 
-  acorn@8.15.0: {}
+  acorn@8.15.0:
+    optional: true
 
   ansi-regex@5.0.1: {}
 
@@ -3293,7 +3305,8 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  aria-query@5.3.2: {}
+  aria-query@5.3.2:
+    optional: true
 
   autoprefixer@10.4.20(postcss@8.4.31):
     dependencies:
@@ -3305,7 +3318,8 @@ snapshots:
       postcss: 8.4.31
       postcss-value-parser: 4.2.0
 
-  axobject-query@4.1.0: {}
+  axobject-query@4.1.0:
+    optional: true
 
   balanced-match@1.0.2: {}
 
@@ -3434,7 +3448,8 @@ snapshots:
 
   cookie-signature@1.2.2: {}
 
-  cookie@0.6.0: {}
+  cookie@0.6.0:
+    optional: true
 
   cookie@0.7.2: {}
 
@@ -3465,7 +3480,8 @@ snapshots:
 
   deep-extend@0.6.0: {}
 
-  deepmerge@4.3.1: {}
+  deepmerge@4.3.1:
+    optional: true
 
   depd@2.0.0: {}
 
@@ -3473,7 +3489,8 @@ snapshots:
 
   detect-node-es@1.1.0: {}
 
-  devalue@5.1.1: {}
+  devalue@5.1.1:
+    optional: true
 
   didyoumean@1.2.2: {}
 
@@ -3506,7 +3523,8 @@ snapshots:
       graceful-fs: 4.2.11
       tapable: 2.2.2
 
-  entities@4.5.0: {}
+  entities@4.5.0:
+    optional: true
 
   es-define-property@1.0.1: {}
 
@@ -3544,18 +3562,22 @@ snapshots:
       '@esbuild/win32-arm64': 0.25.9
       '@esbuild/win32-ia32': 0.25.9
       '@esbuild/win32-x64': 0.25.9
+    optional: true
 
   escalade@3.2.0: {}
 
   escape-html@1.0.3: {}
 
-  esm-env@1.2.2: {}
+  esm-env@1.2.2:
+    optional: true
 
   esrap@2.1.0:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
+    optional: true
 
-  estree-walker@2.0.2: {}
+  estree-walker@2.0.2:
+    optional: true
 
   etag@1.8.1: {}
 
@@ -3613,6 +3635,7 @@ snapshots:
   fdir@6.5.0(picomatch@4.0.3):
     optionalDependencies:
       picomatch: 4.0.3
+    optional: true
 
   file-uri-to-path@1.0.0: {}
 
@@ -3748,6 +3771,7 @@ snapshots:
   is-reference@3.0.3:
     dependencies:
       '@types/estree': 1.0.8
+    optional: true
 
   isexe@2.0.0: {}
 
@@ -3761,7 +3785,8 @@ snapshots:
 
   jiti@2.5.1: {}
 
-  kleur@4.1.5: {}
+  kleur@4.1.5:
+    optional: true
 
   lightningcss-darwin-arm64@1.30.1:
     optional: true
@@ -3814,7 +3839,8 @@ snapshots:
 
   lines-and-columns@1.2.4: {}
 
-  locate-character@3.0.0: {}
+  locate-character@3.0.0:
+    optional: true
 
   lru-cache@10.4.3: {}
 
@@ -3863,9 +3889,11 @@ snapshots:
 
   mkdirp@3.0.1: {}
 
-  mri@1.2.0: {}
+  mri@1.2.0:
+    optional: true
 
-  mrmime@2.0.1: {}
+  mrmime@2.0.1:
+    optional: true
 
   ms@2.1.3: {}
 
@@ -3959,7 +3987,8 @@ snapshots:
 
   picomatch@2.3.1: {}
 
-  picomatch@4.0.3: {}
+  picomatch@4.0.3:
+    optional: true
 
   pify@2.3.0: {}
 
@@ -4140,6 +4169,7 @@ snapshots:
       '@rollup/rollup-win32-ia32-msvc': 4.47.1
       '@rollup/rollup-win32-x64-msvc': 4.47.1
       fsevents: 2.3.3
+    optional: true
 
   router@2.2.0:
     dependencies:
@@ -4158,6 +4188,7 @@ snapshots:
   sade@1.8.1:
     dependencies:
       mri: 1.2.0
+    optional: true
 
   safe-buffer@5.2.1: {}
 
@@ -4192,7 +4223,8 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  set-cookie-parser@2.7.1: {}
+  set-cookie-parser@2.7.1:
+    optional: true
 
   setprototypeof@1.2.0: {}
 
@@ -4277,6 +4309,7 @@ snapshots:
       '@polka/url': 1.0.0-next.29
       mrmime: 2.0.1
       totalist: 3.0.1
+    optional: true
 
   source-map-js@1.2.1: {}
 
@@ -4345,6 +4378,7 @@ snapshots:
       locate-character: 3.0.0
       magic-string: 0.30.17
       zimmerframe: 1.1.2
+    optional: true
 
   tailwind-merge@2.5.5: {}
 
@@ -4419,6 +4453,7 @@ snapshots:
     dependencies:
       fdir: 6.5.0(picomatch@4.0.3)
       picomatch: 4.0.3
+    optional: true
 
   to-regex-range@5.0.1:
     dependencies:
@@ -4426,7 +4461,8 @@ snapshots:
 
   toidentifier@1.0.1: {}
 
-  totalist@3.0.1: {}
+  totalist@3.0.1:
+    optional: true
 
   ts-interface-checker@0.1.13: {}
 
@@ -4496,15 +4532,18 @@ snapshots:
       jiti: 2.5.1
       lightningcss: 1.30.1
       yaml: 2.8.1
+    optional: true
 
   vitefu@1.1.1(vite@7.1.3(@types/node@22.0.0)(jiti@2.5.1)(lightningcss@1.30.1)(yaml@2.8.1)):
     optionalDependencies:
       vite: 7.1.3(@types/node@22.0.0)(jiti@2.5.1)(lightningcss@1.30.1)(yaml@2.8.1)
+    optional: true
 
   vue-router@4.5.1(vue@3.5.19(typescript@5.0.2)):
     dependencies:
       '@vue/devtools-api': 6.6.4
       vue: 3.5.19(typescript@5.0.2)
+    optional: true
 
   vue@3.5.19(typescript@5.0.2):
     dependencies:
@@ -4515,6 +4554,7 @@ snapshots:
       '@vue/shared': 3.5.19
     optionalDependencies:
       typescript: 5.0.2
+    optional: true
 
   which@2.0.2:
     dependencies:
@@ -4538,4 +4578,5 @@ snapshots:
 
   yaml@2.8.1: {}
 
-  zimmerframe@1.1.2: {}
+  zimmerframe@1.1.2:
+    optional: true

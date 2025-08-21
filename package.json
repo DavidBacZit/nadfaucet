@@ -18,8 +18,7 @@
     "@radix-ui/react-select": "2.1.4",
     "@radix-ui/react-separator": "1.1.1",
     "@radix-ui/react-slot": "latest",
-    "@sveltejs/kit": "latest",
-    "@vercel/speed-insights": "latest",
+    "@vercel/speed-insights": "1.2.0",
     "autoprefixer": "^10.4.20",
     "better-sqlite3": "latest",
     "class-variance-authority": "^0.7.1",
@@ -35,13 +34,10 @@
     "postcss": "^8.4.31",
     "react": "^19",
     "react-dom": "^19",
-    "svelte": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss": "^3.4.13",
     "tailwindcss-animate": "^1.0.7",
-    "url": "latest",
-    "vue": "latest",
-    "vue-router": "latest"
+    "url": "latest"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.9",
