@@ -5,7 +5,7 @@ import { FaucetApiClient } from "../lib/api-client.js"
 async function testMining() {
   console.log("[v0] Testing mining functionality...")
 
-  const apiClient = new FaucetApiClient("http://localhost:3000")
+  const apiClient = new FaucetApiClient("https://competitive-emission-lib-thereafter.trycloudflare.com")
   const miningManager = new MiningManager()
 
   try {

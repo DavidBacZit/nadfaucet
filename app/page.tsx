@@ -11,7 +11,6 @@ import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { MiningManager } from "@/lib/mining-manager"
 import { FaucetApiClient } from "@/lib/api-client"
-import { SpeedInsights } from "@vercel/speed-insights/next"
 export default function PoWFaucetPage() {
   // State management
   const [address, setAddress] = useState("")
@@ -31,7 +30,9 @@ export default function PoWFaucetPage() {
   const [status, setStatus] = useState("")
   const [error, setError] = useState("")
   const [miningManager, setMiningManager] = useState<MiningManager | null>(null)
-  const [apiClient] = useState(() => new FaucetApiClient("http://localhost:3000"))
+  const [apiClient] = useState(
+    () => new FaucetApiClient("https://competitive-emission-lib-thereafter.trycloudflare.com"),
+  )
   const [connectionStatus, setConnectionStatus] = useState({ connected: false, checking: true })
 
   // Initialize mining manager
@@ -143,7 +144,7 @@ export default function PoWFaucetPage() {
     }
 
     if (!connectionStatus.connected) {
-      setError("Cannot start mining: Server is not connected. Make sure the server is running on port 3000.")
+      setError("Cannot start mining: Server is not connected. Please check your server connection.")
       return
     }
 
@@ -245,8 +246,8 @@ export default function PoWFaucetPage() {
         {!connectionStatus.connected && !connectionStatus.checking && (
           <Alert>
             <AlertDescription>
-              <strong>Server not running:</strong> To start mining, you need to run the server first. Open a terminal
-              and run: <code className="bg-muted px-1 rounded">npm run server</code>
+              <strong>Server not running:</strong> Cannot connect to the mining server. Make sure your backend server is
+              running and accessible at the configured endpoint.
             </AlertDescription>
           </Alert>
         )}
