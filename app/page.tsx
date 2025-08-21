@@ -303,7 +303,20 @@ export default function PoWFaucetPage() {
                     min="1"
                     max={maxWorkers}
                     value={hashRate}
-                    onChange={(e) => updateHashRate(Math.max(1, Math.min(Number(e.target.value) || 1, maxWorkers)))}
+                    onChange={(e) => {
+                      const value = Number(e.target.value)
+                      if (value >= 1 && value <= maxWorkers) {
+                        updateHashRate(value)
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = Number(e.target.value)
+                      if (isNaN(value) || value < 1) {
+                        updateHashRate(1)
+                      } else if (value > maxWorkers) {
+                        updateHashRate(maxWorkers)
+                      }
+                    }}
                     className="text-center font-mono"
                   />
                   <Button
@@ -355,7 +368,7 @@ export default function PoWFaucetPage() {
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Time Left:</span>
                   <span className="font-mono">
-                    {connectionStatus.connected ? `${(timeLeft / 1000).toFixed(1)}s` : "40000s"}
+                    {connectionStatus.connected ? `${Math.max(0.4, timeLeft / 1000).toFixed(1)}s` : "40000s"}
                   </span>
                 </div>
               </div>
@@ -365,15 +378,15 @@ export default function PoWFaucetPage() {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Lucky Winner:</span>
-                  <span>50 tokens</span>
+                  <span>50 tokens/block</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Shared Pool:</span>
-                  <span>50 tokens</span>
+                  <span>50 tokens/block</span>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  1 lucky winner gets 50 tokens • Remaining 50 tokens shared proportionally (more workers = higher
-                  winning rate)
+                  1 lucky person gets 50 tokens/block (more workers = higher winning rate) • Remaining 50 tokens/block
+                  shared to everyone according to worker contribution ratio
                 </div>
               </div>
             </CardContent>
