@@ -15,7 +15,6 @@ export default function PoWFaucetPage() {
   // State management
   const [address, setAddress] = useState("")
   const [hashRate, setHashRate] = useState(1)
-  const [maxWorkers, setMaxWorkers] = useState(8) // Reasonable default limit
   const [isRunning, setIsRunning] = useState(false)
   const [balance, setBalance] = useState(0)
   const [currentBlock, setCurrentBlock] = useState(0)
@@ -51,6 +50,8 @@ export default function PoWFaucetPage() {
               blockNumber: share.blockNumber,
               leadingZeroBits: share.leadingZeroBits,
               nonce: share.nonce,
+              difficulty: share.difficultyBits,
+              hashHex: share.hashHex,
             })
 
             const result = await apiClient.submitShare(share.address, share.blockNumber, share.nonce)
@@ -107,12 +108,6 @@ export default function PoWFaucetPage() {
 
     checkConnection()
   }, [apiClient])
-
-  useEffect(() => {
-    if (typeof navigator !== "undefined" && navigator.hardwareConcurrency) {
-      setMaxWorkers(Math.min(navigator.hardwareConcurrency, 8))
-    }
-  }, [])
 
   // Update challenge and balance periodically
   useEffect(() => {
@@ -174,6 +169,14 @@ export default function PoWFaucetPage() {
 
     try {
       const challenge = await apiClient.getChallenge()
+      console.log("[v0] Starting mining with challenge:", {
+        address,
+        blockNumber: challenge.blockNumber,
+        seedHex: challenge.seedHex,
+        difficultyBits: challenge.difficultyBits,
+        hashRate,
+      })
+
       miningManager.startMining(
         {
           address,
@@ -208,9 +211,9 @@ export default function PoWFaucetPage() {
   )
 
   const incrementHashRate = useCallback(() => {
-    const newRate = Math.min(hashRate + 1, maxWorkers)
+    const newRate = hashRate + 1
     updateHashRate(newRate)
-  }, [hashRate, updateHashRate, maxWorkers])
+  }, [hashRate, updateHashRate])
 
   const decrementHashRate = useCallback(() => {
     const newRate = Math.max(hashRate - 1, 1)
@@ -318,20 +321,19 @@ export default function PoWFaucetPage() {
                     id="hashrate"
                     type="number"
                     min="1"
-                    max={maxWorkers}
                     value={hashRate}
                     onChange={(e) => {
                       const value = Number(e.target.value)
-                      if (value >= 1 && value <= maxWorkers) {
+                      if (!isNaN(value) && value >= 1) {
                         updateHashRate(value)
+                      } else if (e.target.value === "") {
+                        setHashRate(1)
                       }
                     }}
                     onBlur={(e) => {
                       const value = Number(e.target.value)
                       if (isNaN(value) || value < 1) {
                         updateHashRate(1)
-                      } else if (value > maxWorkers) {
-                        updateHashRate(maxWorkers)
                       }
                     }}
                     className="text-center font-mono"
@@ -341,13 +343,11 @@ export default function PoWFaucetPage() {
                     variant="outline"
                     size="sm"
                     onClick={incrementHashRate}
-                    disabled={hashRate >= maxWorkers}
-                    className="px-3"
+                    className="px-3 bg-transparent"
                   >
                     +
                   </Button>
                 </div>
-                <div className="text-xs text-muted-foreground">Max: {maxWorkers} workers (CPU cores)</div>
               </div>
 
               <div className="flex gap-2">

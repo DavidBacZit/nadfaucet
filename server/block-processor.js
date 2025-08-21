@@ -92,11 +92,21 @@ export class BlockProcessor {
     const totalShares = shares.length
     const rewards = new Map()
 
+    console.log(`[v0] Block ${blockNumber}: Share distribution:`)
+    for (const [address, shareCount] of sharesByAddress) {
+      console.log(`[v0]   ${address}: ${shareCount} shares`)
+    }
+
     // Pool A: Proportional rewards (50 tokens = 50 * 1e6 micro-tokens)
     const poolAReward = this.config.POOL_A_REWARD_TOKENS * 1e6
+    console.log(`[v0] Block ${blockNumber}: Pool A distributing ${poolAReward / 1e6} tokens proportionally`)
+
     for (const [address, shareCount] of sharesByAddress) {
       const proportionalReward = Math.floor((poolAReward * shareCount) / totalShares)
       rewards.set(address, (rewards.get(address) || 0) + proportionalReward)
+      console.log(
+        `[v0]   Pool A: ${address} gets ${proportionalReward / 1e6} tokens (${shareCount}/${totalShares} shares)`,
+      )
     }
 
     // Pool B: Weighted lottery (50 tokens = 50 * 1e6 micro-tokens)
@@ -104,14 +114,21 @@ export class BlockProcessor {
     const addresses = Array.from(sharesByAddress.keys())
     const weights = addresses.map((addr) => sharesByAddress.get(addr))
 
+    console.log(`[v0] Block ${blockNumber}: Pool B lottery with weights:`, weights)
+
     const winnerIndex = selectWeightedRandom(weights)
     if (winnerIndex >= 0) {
       const winnerAddress = addresses[winnerIndex]
       rewards.set(winnerAddress, (rewards.get(winnerAddress) || 0) + poolBReward)
-      console.log(`[v0] Block ${blockNumber}: Pool B winner: ${winnerAddress} (${weights[winnerIndex]} shares)`)
+      console.log(
+        `[v0] Block ${blockNumber}: Pool B winner: ${winnerAddress} gets ${poolBReward / 1e6} tokens (${weights[winnerIndex]} shares, index ${winnerIndex})`,
+      )
+    } else {
+      console.log(`[v0] Block ${blockNumber}: Pool B lottery failed - no winner selected`)
     }
 
     // Apply rewards atomically
+    console.log(`[v0] Block ${blockNumber}: Applying rewards to database...`)
     this.applyRewards(rewards)
 
     // Mark block as processed
@@ -120,13 +137,15 @@ export class BlockProcessor {
     // Log reward summary
     const totalRewardsMicro = Array.from(rewards.values()).reduce((sum, reward) => sum + reward, 0)
     const totalRewardsTokens = totalRewardsMicro / 1e6
-    console.log(`[v0] Block ${blockNumber}: Distributed ${totalRewardsTokens} tokens to ${rewards.size} addresses`)
+    console.log(
+      `[v0] Block ${blockNumber}: FINAL - Distributed ${totalRewardsTokens} tokens to ${rewards.size} addresses`,
+    )
 
-    // Log individual rewards for debugging
+    // Log individual final rewards
     for (const [address, rewardMicro] of rewards) {
       const rewardTokens = rewardMicro / 1e6
       const shareCount = sharesByAddress.get(address)
-      console.log(`[v0]   ${address}: ${rewardTokens} tokens (${shareCount} shares)`)
+      console.log(`[v0]   FINAL: ${address}: ${rewardTokens} tokens total (${shareCount} shares)`)
     }
   }
 
