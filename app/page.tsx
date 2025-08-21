@@ -46,10 +46,21 @@ export default function PoWFaucetPage() {
         // Set up event handlers
         manager.onShareFound = async (share) => {
           try {
-            await apiClient.submitShare(share.address, share.blockNumber, share.nonce)
+            console.log("[v0] Share found:", {
+              address: share.address,
+              blockNumber: share.blockNumber,
+              leadingZeroBits: share.leadingZeroBits,
+              nonce: share.nonce,
+            })
+
+            const result = await apiClient.submitShare(share.address, share.blockNumber, share.nonce)
+
+            console.log("[v0] Share submitted successfully:", result)
+
             setStatus(`Share submitted! Difficulty: ${share.leadingZeroBits} bits`)
             setTimeout(() => setStatus(""), 3000)
           } catch (err) {
+            console.log("[v0] Share submission failed:", err.message)
             setError(`Failed to submit share: ${err.message}`)
           }
         }
@@ -117,6 +128,12 @@ export default function PoWFaucetPage() {
 
         if (address && /^0x[a-fA-F0-9]{40}$/.test(address)) {
           const status = await apiClient.getStatus(address)
+          console.log("[v0] Balance update:", {
+            address,
+            balanceMicro: status.balanceMicro,
+            balanceTokens: status.balanceMicro / 1e6,
+            blockNumber: status.blockNumber,
+          })
           setBalance(status.balanceMicro)
 
           // Update mining challenge if running

@@ -125,7 +125,7 @@ app.post("/submit-proof", submitLimiter, (req, res) => {
     })
   }
 
-  console.log(`[v0] Share accepted: ${address} block=${blockNumber} difficulty=${leadingZeroBits}`)
+  console.log(`[v0] Share accepted: ${address} block=${blockNumber} difficulty=${leadingZeroBits} hash=${hash}`)
 
   res.json({
     ok: true,
@@ -148,6 +148,8 @@ app.get("/status", (req, res) => {
 
   const balanceMicro = db.getBalance(address)
   const stats = blockProcessor.getBlockStats()
+
+  console.log(`[v0] Balance query: ${address} = ${balanceMicro} micro-tokens (${balanceMicro / 1e6} tokens)`)
 
   res.json({
     ok: true,
