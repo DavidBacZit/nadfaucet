@@ -17,8 +17,9 @@
     "@radix-ui/react-progress": "1.1.1",
     "@radix-ui/react-select": "2.1.4",
     "@radix-ui/react-separator": "1.1.1",
-    "@radix-ui/react-slot": "1.1.1",
-    "@vercel/speed-insights": "1.2.0",
+    "@radix-ui/react-slot": "latest",
+    "@sveltejs/kit": "latest",
+    "@vercel/speed-insights": "latest",
     "better-sqlite3": "latest",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -31,9 +32,12 @@
     "path": "latest",
     "react": "^19",
     "react-dom": "^19",
+    "svelte": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
-    "url": "latest"
+    "url": "latest",
+    "vue": "latest",
+    "vue-router": "latest"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.9",

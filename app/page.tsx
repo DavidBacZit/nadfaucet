@@ -11,10 +11,12 @@ import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { MiningManager } from "@/lib/mining-manager"
 import { FaucetApiClient } from "@/lib/api-client"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 export default function PoWFaucetPage() {
   // State management
   const [address, setAddress] = useState("")
   const [hashRate, setHashRate] = useState(1)
+  const [maxWorkers, setMaxWorkers] = useState(64) // Default server-safe value
   const [isRunning, setIsRunning] = useState(false)
   const [balance, setBalance] = useState(0)
   const [currentBlock, setCurrentBlock] = useState(0)
@@ -95,6 +97,12 @@ export default function PoWFaucetPage() {
 
     checkConnection()
   }, [apiClient])
+
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && navigator.hardwareConcurrency) {
+      setMaxWorkers(navigator.hardwareConcurrency)
+    }
+  }, [])
 
   // Update challenge and balance periodically
   useEffect(() => {
@@ -184,9 +192,9 @@ export default function PoWFaucetPage() {
   )
 
   const incrementHashRate = useCallback(() => {
-    const newRate = Math.min(hashRate + 1, navigator.hardwareConcurrency || 64)
+    const newRate = Math.min(hashRate + 1, maxWorkers)
     updateHashRate(newRate)
-  }, [hashRate, updateHashRate])
+  }, [hashRate, updateHashRate, maxWorkers])
 
   const decrementHashRate = useCallback(() => {
     const newRate = Math.max(hashRate - 1, 1)
@@ -294,13 +302,9 @@ export default function PoWFaucetPage() {
                     id="hashrate"
                     type="number"
                     min="1"
-                    max={navigator.hardwareConcurrency || 64}
+                    max={maxWorkers}
                     value={hashRate}
-                    onChange={(e) =>
-                      updateHashRate(
-                        Math.max(1, Math.min(Number(e.target.value) || 1, navigator.hardwareConcurrency || 64)),
-                      )
-                    }
+                    onChange={(e) => updateHashRate(Math.max(1, Math.min(Number(e.target.value) || 1, maxWorkers)))}
                     className="text-center font-mono"
                   />
                   <Button
@@ -308,15 +312,13 @@ export default function PoWFaucetPage() {
                     variant="outline"
                     size="sm"
                     onClick={incrementHashRate}
-                    disabled={hashRate >= (navigator.hardwareConcurrency || 64)}
+                    disabled={hashRate >= maxWorkers}
                     className="px-3"
                   >
                     +
                   </Button>
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  Max: {navigator.hardwareConcurrency || 64} workers (CPU cores)
-                </div>
+                <div className="text-xs text-muted-foreground">Max: {maxWorkers} workers (CPU cores)</div>
               </div>
 
               <div className="flex gap-2">
