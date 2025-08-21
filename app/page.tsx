@@ -5,12 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { MiningManager, HASH_RATE_OPTIONS } from "@/lib/mining-manager"
+import { MiningManager } from "@/lib/mining-manager"
 import { FaucetApiClient } from "@/lib/api-client"
 
 export default function PoWFaucetPage() {
@@ -26,6 +25,7 @@ export default function PoWFaucetPage() {
     totalShares: 0,
     actualHashRate: 0,
     uptime: 0,
+    activeWorkers: 0,
   })
   const [withdrawAmount, setWithdrawAmount] = useState("")
   const [status, setStatus] = useState("")
@@ -62,6 +62,9 @@ export default function PoWFaucetPage() {
 
         manager.onStatusChange = (status) => {
           setIsRunning(status.isRunning)
+          if (status.activeWorkers !== undefined) {
+            setMiningStats((prev) => ({ ...prev, activeWorkers: status.activeWorkers }))
+          }
         }
 
         setMiningManager(manager)
@@ -179,6 +182,16 @@ export default function PoWFaucetPage() {
     [miningManager, isRunning],
   )
 
+  const incrementHashRate = useCallback(() => {
+    const newRate = Math.min(hashRate + 1, navigator.hardwareConcurrency || 64)
+    updateHashRate(newRate)
+  }, [hashRate, updateHashRate])
+
+  const decrementHashRate = useCallback(() => {
+    const newRate = Math.max(hashRate - 1, 1)
+    updateHashRate(newRate)
+  }, [hashRate, updateHashRate])
+
   // Withdrawal
   const requestWithdrawal = useCallback(async () => {
     if (!address || !withdrawAmount) {
@@ -207,10 +220,7 @@ export default function PoWFaucetPage() {
       <div className="mx-auto max-w-6xl space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-foreground">PoW Mining Faucet</h1>
-          <p className="text-muted-foreground">
-            Mine cryptocurrency in your browser and earn tokens through dual reward pools
-          </p>
+          <h1 className="text-3xl font-bold text-foreground">$MON faucet</h1>
           <div className="flex items-center justify-center gap-2">
             <div
               className={`w-2 h-2 rounded-full ${connectionStatus.checking ? "bg-yellow-500" : connectionStatus.connected ? "bg-green-500" : "bg-red-500"}`}
@@ -267,19 +277,45 @@ export default function PoWFaucetPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="hashrate">Hash Rate</Label>
-                <Select value={hashRate.toString()} onValueChange={(value) => updateHashRate(Number(value))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {HASH_RATE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value.toString()}>
-                        {option.label} - {option.description}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="hashrate">Hash Rate (Workers)</Label>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={decrementHashRate}
+                    disabled={hashRate <= 1}
+                    className="px-3 bg-transparent"
+                  >
+                    -
+                  </Button>
+                  <Input
+                    id="hashrate"
+                    type="number"
+                    min="1"
+                    max={navigator.hardwareConcurrency || 64}
+                    value={hashRate}
+                    onChange={(e) =>
+                      updateHashRate(
+                        Math.max(1, Math.min(Number(e.target.value) || 1, navigator.hardwareConcurrency || 64)),
+                      )
+                    }
+                    className="text-center font-mono"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={incrementHashRate}
+                    disabled={hashRate >= (navigator.hardwareConcurrency || 64)}
+                    className="px-3"
+                  >
+                    +
+                  </Button>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Max: {navigator.hardwareConcurrency || 64} workers (CPU cores)
+                </div>
               </div>
 
               <div className="flex gap-2">
@@ -293,7 +329,11 @@ export default function PoWFaucetPage() {
 
               <div className="flex items-center justify-between text-sm">
                 <span>Status:</span>
-                <Badge variant={isRunning ? "default" : "secondary"}>{isRunning ? "Mining" : "Stopped"}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant={isRunning ? "default" : "secondary"}>
+                    {isRunning ? `Mining (${miningStats.activeWorkers} workers)` : "Stopped"}
+                  </Badge>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -396,6 +436,10 @@ export default function PoWFaucetPage() {
                 <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">Uptime</div>
                   <div className="text-2xl font-bold">{Math.floor(miningStats.uptime)}s</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-sm text-muted-foreground">Active Workers</div>
+                  <div className="text-2xl font-bold text-chart-2">{miningStats.activeWorkers}</div>
                 </div>
               </div>
 

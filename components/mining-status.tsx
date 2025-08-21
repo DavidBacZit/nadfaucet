@@ -12,6 +12,7 @@ interface MiningStatusProps {
     totalShares: number
     actualHashRate: number
     uptime: number
+    activeWorkers?: number
   }
 }
 
@@ -23,7 +24,9 @@ export function MiningStatus({ isRunning, hashRate, currentBlock, timeLeft, stat
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           Mining Status
-          <Badge variant={isRunning ? "default" : "secondary"}>{isRunning ? "Active" : "Inactive"}</Badge>
+          <Badge variant={isRunning ? "default" : "secondary"}>
+            {isRunning ? `Active (${stats.activeWorkers || 0} workers)` : "Inactive"}
+          </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -43,6 +46,10 @@ export function MiningStatus({ isRunning, hashRate, currentBlock, timeLeft, stat
           <div>
             <div className="text-muted-foreground">Time Left</div>
             <div className="font-mono">{(timeLeft / 1000).toFixed(1)}s</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Active Workers</div>
+            <div className="font-mono">{stats.activeWorkers || 0}</div>
           </div>
         </div>
 
