@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -58,11 +58,11 @@ export default function PoWFaucetPage() {
 
             console.log("[v0] Share submitted successfully:", result)
 
-            setStatus(`Share submitted! Difficulty: ${share.leadingZeroBits} bits`)
+            //setStatus(`Share submitted! Difficulty: ${share.leadingZeroBits} bits`)
             setTimeout(() => setStatus(""), 3000)
           } catch (err) {
             console.log("[v0] Share submission failed:", err.message)
-            setError(`Failed to submit share: ${err.message}`)
+            //setError(`Failed to submit share: ${err.message}`)
           }
         }
 
@@ -71,7 +71,7 @@ export default function PoWFaucetPage() {
         }
 
         manager.onError = (err) => {
-          setError(`Mining error: ${err.message}`)
+          //setError(`Mining error: ${err.message}`)
         }
 
         manager.onStatusChange = (status) => {
@@ -83,7 +83,7 @@ export default function PoWFaucetPage() {
 
         setMiningManager(manager)
       } catch (err) {
-        setError(`Failed to initialize mining: ${err.message}`)
+        //setError(`Failed to initialize mining: ${err.message}`)
       }
     }
 
@@ -96,15 +96,61 @@ export default function PoWFaucetPage() {
     }
   }, [])
 
-  useEffect(() => {
-    const checkConnection = async () => {
-      const result = await apiClient.testConnection()
-      setConnectionStatus({ ...result, checking: false })
+  // Reconnect timer ref
+  const reconnectTimer = useRef<number | null>(null)
 
-      if (!result.connected) {
-        setError(`Server connection failed: ${result.error}`)
+  useEffect(() => {
+    let mounted = true
+
+    const checkConnection = async () => {
+      try {
+        const result = await apiClient.testConnection()
+        if (!mounted) return
+
+        setConnectionStatus({ ...result, checking: false })
+
+        // nếu thất bại thì đặt retry sau 12s
+        if (!result.connected) {
+          // clear timer nếu có
+          if (reconnectTimer.current) {
+            clearTimeout(reconnectTimer.current)
+            reconnectTimer.current = null
+          }
+          reconnectTimer.current = window.setTimeout(() => {
+            // gọi lại
+            checkConnection().catch(() => {})
+          }, 12000)
+        } else {
+          // nếu đã connected thì clear timer (nếu còn)
+          if (reconnectTimer.current) {
+            clearTimeout(reconnectTimer.current)
+            reconnectTimer.current = null
+          }
+        }
+      } catch (err) {
+        if (!mounted) return
+        // khi có lỗi mạng, đặt state checking = false và retry
+        setConnectionStatus({ connected: false, checking: false })
+        if (reconnectTimer.current) {
+          clearTimeout(reconnectTimer.current)
+          reconnectTimer.current = null
+        }
+        reconnectTimer.current = window.setTimeout(() => {
+          checkConnection().catch(() => {})
+        }, 12000)
       }
     }
+
+    checkConnection().catch(() => {})
+
+    return () => {
+      mounted = false
+      if (reconnectTimer.current) {
+        clearTimeout(reconnectTimer.current)
+        reconnectTimer.current = null
+      }
+    }
+  }, [apiClient])
 
     checkConnection()
   }, [apiClient])
@@ -145,7 +191,7 @@ export default function PoWFaucetPage() {
         console.error("Failed to update data:", err)
         if (err.message.includes("Cannot connect to server") || err.message.includes("Network error")) {
           setConnectionStatus({ connected: false, checking: false })
-          setError(err.message)
+          //setError(err.message)
         }
       }
     }
@@ -163,7 +209,7 @@ export default function PoWFaucetPage() {
     }
 
     if (!connectionStatus.connected) {
-      setError("Cannot start mining: Server is not connected. Please check your server connection.")
+      //setError("Cannot start mining: Server is not connected. Please check your server connection.")
       return
     }
 
@@ -186,10 +232,10 @@ export default function PoWFaucetPage() {
         },
         hashRate,
       )
-      setError("")
-      setStatus("Mining started!")
+      //setError("")
+      //setStatus("Mining started!")
     } catch (err) {
-      setError(`Failed to start mining: ${err.message}`)
+      //setError(`Failed to start mining: ${err.message}`)
     }
   }, [miningManager, address, hashRate, apiClient, connectionStatus.connected])
 
@@ -383,9 +429,9 @@ export default function PoWFaucetPage() {
                   <span className="font-mono">{currentBlock}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Block production speed:</span>
+                  <span className="text-sm text-muted-foreground">Time Left:</span>
                   <span className="font-mono">
-                    {connectionStatus.connected ? "12s" : "40000s"}
+                    {connectionStatus.connected ? `${Math.max(12, timeLeft / 1000).toFixed(1)}s` : "40000s"}
                   </span>
                 </div>
               </div>
@@ -465,11 +511,6 @@ export default function PoWFaucetPage() {
               )}
             </CardContent>
           </Card>
-        </div>
-
-        {/* Footer */}
-        <div className="text-center text-sm text-muted-foreground">
-          <p>Proof-of-Work mining faucet with dual reward pools • Block time: 400ms • Difficulty: 18 bits</p>
         </div>
       </div>
     </div>
