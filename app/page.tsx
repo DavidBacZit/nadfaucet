@@ -31,7 +31,7 @@ export default function PoWFaucetPage() {
   const [error, setError] = useState("")
   const [miningManager, setMiningManager] = useState<MiningManager | null>(null)
   const [apiClient] = useState(
-    () => new FaucetApiClient("https://competitive-emission-lib-thereafter.trycloudflare.com"),
+    () => new FaucetApiClient("https://dried-impacts-yn-hazards.trycloudflare.com"),
   )
   const [connectionStatus, setConnectionStatus] = useState({ connected: false, checking: true })
 
