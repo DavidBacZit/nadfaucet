@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { MiningManager } from "@/lib/mining-manager"
 import { FaucetApiClient } from "@/lib/api-client"
+
 export default function PoWFaucetPage() {
   // State management
   const [address, setAddress] = useState("")
@@ -35,11 +36,18 @@ export default function PoWFaucetPage() {
   )
   const [connectionStatus, setConnectionStatus] = useState({ connected: false, checking: true })
 
-  // Initialize mining manager
+  // Prevent concurrent API calls
+  const isUpdatingChallengeRef = useRef(false)
+  const isUpdatingBalanceRef = useRef(false)
+
+  // Initialize mining manager (robust cleanup)
   useEffect(() => {
+    let mounted = true
+    let manager: MiningManager | null = null
+
     const initMining = async () => {
       try {
-        const manager = new MiningManager()
+        manager = new MiningManager()
         await manager.initialize()
 
         // Set up event handlers
@@ -58,11 +66,10 @@ export default function PoWFaucetPage() {
 
             console.log("[v0] Share submitted successfully:", result)
 
-            //setStatus(`Share submitted! Difficulty: ${share.leadingZeroBits} bits`)
             setTimeout(() => setStatus(""), 3000)
-          } catch (err) {
-            console.log("[v0] Share submission failed:", err.message)
-            //setError(`Failed to submit share: ${err.message}`)
+          } catch (err: any) {
+            console.log("[v0] Share submission failed:", err?.message ?? err)
+            // optionally surface share submit errors
           }
         }
 
@@ -71,7 +78,8 @@ export default function PoWFaucetPage() {
         }
 
         manager.onError = (err) => {
-          //setError(`Mining error: ${err.message}`)
+          // you can surface mining errors if desired
+          console.warn("MiningManager error:", err)
         }
 
         manager.onStatusChange = (status) => {
@@ -81,24 +89,37 @@ export default function PoWFaucetPage() {
           }
         }
 
+        if (!mounted) {
+          // if unmounted in the meantime, clean up
+          manager.destroy()
+          return
+        }
+
         setMiningManager(manager)
-      } catch (err) {
-        //setError(`Failed to initialize mining: ${err.message}`)
+      } catch (err: any) {
+        console.error("Failed to initialize mining:", err?.message ?? err)
+        setError("Failed to initialize mining manager")
       }
     }
 
     initMining()
 
     return () => {
-      if (miningManager) {
-        miningManager.destroy()
+      mounted = false
+      if (manager) {
+        try {
+          manager.destroy()
+        } catch (e) {
+          console.warn("Error destroying mining manager:", e)
+        }
       }
     }
-  }, [])
+  }, [apiClient])
 
   // Reconnect timer ref
   const reconnectTimer = useRef<number | null>(null)
 
+  // Check connection — retry every 30s when offline
   useEffect(() => {
     let mounted = true
 
@@ -109,7 +130,7 @@ export default function PoWFaucetPage() {
 
         setConnectionStatus({ ...result, checking: false })
 
-        // nếu thất bại thì đặt retry sau 12s
+        // nếu thất bại thì đặt retry sau 30s
         if (!result.connected) {
           if (reconnectTimer.current) {
             clearTimeout(reconnectTimer.current)
@@ -117,7 +138,7 @@ export default function PoWFaucetPage() {
           }
           reconnectTimer.current = window.setTimeout(() => {
             checkConnection().catch(() => {})
-          }, 12000)
+          }, 30000)
         } else {
           if (reconnectTimer.current) {
             clearTimeout(reconnectTimer.current)
@@ -133,7 +154,7 @@ export default function PoWFaucetPage() {
         }
         reconnectTimer.current = window.setTimeout(() => {
           checkConnection().catch(() => {})
-        }, 12000)
+        }, 30000)
       }
     }
 
@@ -148,24 +169,42 @@ export default function PoWFaucetPage() {
     }
   }, [apiClient])
 
+  // If server is offline, absolutely stop hashing immediately
   useEffect(() => {
-    let timeout: NodeJS.Timeout
-    let interval: NodeJS.Timeout
+    if (!connectionStatus.connected && miningManager && isRunning) {
+      try {
+        miningManager.stopMining()
+      } catch (e) {
+        console.warn("Failed to stop mining on disconnect:", e)
+      }
+      setStatus("Server offline — mining stopped")
+      setIsRunning(false)
+    }
+  }, [connectionStatus.connected, miningManager, isRunning])
 
-    const updateData = async () => {
+  // Polling: challenge every 888ms; balance every 1 minute (60000ms)
+  useEffect(() => {
+    let mounted = true
+    let challengeInterval: number | null = null
+    let balanceInterval: number | null = null
+
+    const fetchChallenge = async () => {
+      if (!mounted) return
+      if (isUpdatingChallengeRef.current) return
+      isUpdatingChallengeRef.current = true
+
       try {
         const challenge = await apiClient.getChallenge()
+        if (!mounted) return
         setCurrentBlock(challenge.blockNumber)
         setTimeLeft(challenge.msLeft)
 
-        // Đánh dấu server đã kết nối
+        // mark server connected
         setConnectionStatus({ connected: true, checking: false })
 
+        // Only update miningManager if we're running AND server connected
         if (address && /^0x[a-fA-F0-9]{40}$/.test(address)) {
-          const status = await apiClient.getStatus(address)
-          setBalance(status.balanceMicro)
-
-          if (miningManager && isRunning) {
+          if (miningManager && isRunning && connectionStatus.connected) {
             miningManager.updateChallenge({
               address,
               blockNumber: challenge.blockNumber,
@@ -174,33 +213,62 @@ export default function PoWFaucetPage() {
             })
           }
         }
-
-        // Gọi lại đúng lúc block mới (msLeft) để bắt block mới kịp thời
-        timeout = setTimeout(updateData, challenge.msLeft + 200)
       } catch (err: any) {
-        console.error("Failed to update data:", err)
+        console.error("Failed to fetch challenge:", err?.message ?? err)
+        // Treat as server offline on failure
         setConnectionStatus({ connected: false, checking: false })
-
-        // Retry sau 2s nếu lỗi
-        timeout = setTimeout(updateData, 2000)
+        // Ensure mining is stopped immediately
+        if (miningManager && isRunning) {
+          try {
+            miningManager.stopMining()
+          } catch (e) {
+            console.warn("Failed to stop mining after challenge fetch fail:", e)
+          }
+          setIsRunning(false)
+          setStatus("Server offline — mining stopped")
+        }
+      } finally {
+        isUpdatingChallengeRef.current = false
       }
     }
 
-    // Luôn poll tối thiểu mỗi 500ms (phục vụ submit shares nhanh)
-    interval = setInterval(() => {
-      updateData()
-    }, 500)
+    const fetchBalance = async () => {
+      if (!mounted) return
+      if (isUpdatingBalanceRef.current) return
+      isUpdatingBalanceRef.current = true
 
-    // Chạy ngay khi mount
-    updateData()
+      try {
+        if (address && /^0x[a-fA-F0-9]{40}$/.test(address)) {
+          const status = await apiClient.getStatus(address)
+          if (!mounted) return
+          setBalance(status.balanceMicro)
+        }
+      } catch (err: any) {
+        console.error("Failed to fetch balance:", err?.message ?? err)
+      } finally {
+        isUpdatingBalanceRef.current = false
+      }
+    }
+
+    // Initial fetch
+    fetchChallenge().catch(() => {})
+    fetchBalance().catch(() => {})
+
+    // Intervals
+    challengeInterval = window.setInterval(() => {
+      fetchChallenge().catch(() => {})
+    }, 888)
+
+    balanceInterval = window.setInterval(() => {
+      fetchBalance().catch(() => {})
+    }, 60_000)
 
     return () => {
-      clearTimeout(timeout)
-      clearInterval(interval)
+      mounted = false
+      if (challengeInterval) clearInterval(challengeInterval)
+      if (balanceInterval) clearInterval(balanceInterval)
     }
-  }, [address, isRunning, miningManager])
-
-
+  }, [address, isRunning, miningManager, apiClient, connectionStatus.connected])
 
   // Mining controls
   const startMining = useCallback(async () => {
@@ -210,7 +278,7 @@ export default function PoWFaucetPage() {
     }
 
     if (!connectionStatus.connected) {
-      //setError("Cannot start mining: Server is not connected. Please check your server connection.")
+      setError("Cannot start mining: Server is not connected. Please check your server connection.")
       return
     }
 
@@ -233,10 +301,10 @@ export default function PoWFaucetPage() {
         },
         hashRate,
       )
-      //setError("")
-      //setStatus("Mining started!")
-    } catch (err) {
-      //setError(`Failed to start mining: ${err.message}`)
+      setError("")
+    } catch (err: any) {
+      console.error("Failed to start mining:", err?.message ?? err)
+      setError(`Failed to start mining: ${err?.message ?? String(err)}`)
     }
   }, [miningManager, address, hashRate, apiClient, connectionStatus.connected])
 
@@ -285,8 +353,8 @@ export default function PoWFaucetPage() {
       setStatus(`Withdrawal requested! Net amount: ${result.netAmount / 1e6} tokens`)
       setWithdrawAmount("")
       setError("")
-    } catch (err) {
-      setError(`Withdrawal failed: ${err.message}`)
+    } catch (err: any) {
+      setError(`Withdrawal failed: ${err?.message ?? String(err)}`)
     }
   }, [address, withdrawAmount, apiClient])
 
