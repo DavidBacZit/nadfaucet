@@ -424,7 +424,7 @@ export default function PoWFaucetPage() {
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Time Left:</span>
                   <span className="font-mono">
-                    {connectionStatus.connected ? `${Math.max(12, timeLeft / 1000).toFixed(1)}s` : "40000s"}
+                    {connectionStatus.connected ? `${(timeLeft / 1000).toFixed(1)}s` : "—"}
                   </span>
                 </div>
               </div>
