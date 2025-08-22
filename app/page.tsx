@@ -148,12 +148,11 @@ export default function PoWFaucetPage() {
     }
   }, [apiClient])
 
-  // Update challenge and balance periodically
   useEffect(() => {
+    let timeout: NodeJS.Timeout
+
     const updateData = async () => {
-      if (!connectionStatus.connected) {
-        return
-      }
+      if (!connectionStatus.connected) return
 
       try {
         const challenge = await apiClient.getChallenge()
@@ -162,15 +161,8 @@ export default function PoWFaucetPage() {
 
         if (address && /^0x[a-fA-F0-9]{40}$/.test(address)) {
           const status = await apiClient.getStatus(address)
-          console.log("[v0] Balance update:", {
-            address,
-            balanceMicro: status.balanceMicro,
-            balanceTokens: status.balanceMicro / 1e6,
-            blockNumber: status.blockNumber,
-          })
           setBalance(status.balanceMicro)
 
-          // Update mining challenge if running
           if (miningManager && isRunning) {
             miningManager.updateChallenge({
               address,
@@ -180,19 +172,27 @@ export default function PoWFaucetPage() {
             })
           }
         }
-      } catch (err) {
+
+        // Gọi lại đúng lúc block mới
+        timeout = setTimeout(updateData, challenge.msLeft + 200)
+      } catch (err: any) {
         console.error("Failed to update data:", err)
-        if (err.message.includes("Cannot connect to server") || err.message.includes("Network error")) {
+        if (
+          err.message.includes("Cannot connect to server") ||
+          err.message.includes("Network error")
+        ) {
           setConnectionStatus({ connected: false, checking: false })
-          //setError(err.message)
         }
+
+        // Retry sau 2s nếu lỗi
+        timeout = setTimeout(updateData, 2000)
       }
     }
 
     updateData()
-    const interval = setInterval(updateData, 1000)
-    return () => clearInterval(interval)
+    return () => clearTimeout(timeout)
   }, [address, miningManager, isRunning, apiClient, connectionStatus.connected])
+
 
   // Mining controls
   const startMining = useCallback(async () => {
