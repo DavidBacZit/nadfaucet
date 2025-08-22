@@ -11,6 +11,20 @@ import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { MiningManager } from "@/lib/mining-manager"
 import { FaucetApiClient } from "@/lib/api-client"
+
+type PendingShareItem = {
+  share: {
+    address: string
+    blockNumber?: number
+    nonce: string
+    leadingZeroBits?: number
+    hashHex?: string
+  }
+  attempts: number
+  nextAttempt: number
+  addedAt: number
+}
+
 export default function PoWFaucetPage() {
   // State management
   const [address, setAddress] = useState("")
@@ -35,15 +49,25 @@ export default function PoWFaucetPage() {
   )
   const [connectionStatus, setConnectionStatus] = useState({ connected: false, checking: true })
 
+  // Queue for pending shares (in-memory). Kept in ref to avoid re-renders.
+  const pendingSharesRef = useRef<PendingShareItem[]>([])
+  const [pendingCount, setPendingCount] = useState(0)
+  const queueTimerRef = useRef<number | null>(null)
+
+  // Reconnect timer ref
+  const reconnectTimer = useRef<number | null>(null)
+
   // Initialize mining manager
   useEffect(() => {
+    let mounted = true
+
     const initMining = async () => {
       try {
         const manager = new MiningManager()
         await manager.initialize()
 
         // Set up event handlers
-        manager.onShareFound = async (share) => {
+        manager.onShareFound = (share) => {
           try {
             console.log("[v0] Share found:", {
               address: share.address,
@@ -54,15 +78,21 @@ export default function PoWFaucetPage() {
               hashHex: share.hashHex,
             })
 
-            const result = await apiClient.submitShare(share.address, share.blockNumber, share.nonce)
+            // Push to local queue for reliable submission
+            const now = Date.now()
+            pendingSharesRef.current.push({
+              share,
+              attempts: 0,
+              nextAttempt: now,
+              addedAt: now,
+            })
+            setPendingCount(pendingSharesRef.current.length)
 
-            console.log("[v0] Share submitted successfully:", result)
-
-            //setStatus(`Share submitted! Difficulty: ${share.leadingZeroBits} bits`)
-            setTimeout(() => setStatus(""), 3000)
+            // transient UI note
+            setStatus("Share queued")
+            setTimeout(() => setStatus(""), 1500)
           } catch (err) {
-            console.log("[v0] Share submission failed:", err.message)
-            //setError(`Failed to submit share: ${err.message}`)
+            console.error("[v0] Error queueing share:", err)
           }
         }
 
@@ -71,7 +101,8 @@ export default function PoWFaucetPage() {
         }
 
         manager.onError = (err) => {
-          //setError(`Mining error: ${err.message}`)
+          // optionally show errors
+          console.error("[v0] Mining manager error:", err)
         }
 
         manager.onStatusChange = (status) => {
@@ -81,8 +112,13 @@ export default function PoWFaucetPage() {
           }
         }
 
+        if (!mounted) {
+          manager.destroy()
+          return
+        }
         setMiningManager(manager)
       } catch (err) {
+        console.error("[v0] Failed to initialize mining:", err)
         //setError(`Failed to initialize mining: ${err.message}`)
       }
     }
@@ -90,17 +126,18 @@ export default function PoWFaucetPage() {
     initMining()
 
     return () => {
+      mounted = false
       if (miningManager) {
         miningManager.destroy()
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Reconnect timer ref
-  const reconnectTimer = useRef<number | null>(null)
-
+  // Connection / health check loop (with retry/backoff)
   useEffect(() => {
     let mounted = true
+    let backoffMs = 1000
 
     const checkConnection = async () => {
       try {
@@ -109,16 +146,19 @@ export default function PoWFaucetPage() {
 
         setConnectionStatus({ ...result, checking: false })
 
-        // nếu thất bại thì đặt retry sau 12s
         if (!result.connected) {
+          // Exponential backoff up to 12s
           if (reconnectTimer.current) {
             clearTimeout(reconnectTimer.current)
             reconnectTimer.current = null
           }
           reconnectTimer.current = window.setTimeout(() => {
+            backoffMs = Math.min(12000, backoffMs * 2)
             checkConnection().catch(() => {})
-          }, 12000)
+          }, backoffMs)
         } else {
+          // reset backoff
+          backoffMs = 1000
           if (reconnectTimer.current) {
             clearTimeout(reconnectTimer.current)
             reconnectTimer.current = null
@@ -131,9 +171,10 @@ export default function PoWFaucetPage() {
           clearTimeout(reconnectTimer.current)
           reconnectTimer.current = null
         }
+        backoffMs = Math.min(12000, backoffMs * 2)
         reconnectTimer.current = window.setTimeout(() => {
           checkConnection().catch(() => {})
-        }, 12000)
+        }, backoffMs)
       }
     }
 
@@ -148,59 +189,161 @@ export default function PoWFaucetPage() {
     }
   }, [apiClient])
 
+  // Update challenge & block info — drive by server-supplied msLeft and reschedule precisely
   useEffect(() => {
-    let timeout: NodeJS.Timeout
-    let interval: NodeJS.Timeout
+    let mounted = true
+    let timeout: number | undefined
 
-    const updateData = async () => {
+    const updateChallenge = async () => {
       try {
         const challenge = await apiClient.getChallenge()
+        if (!mounted) return
+
         setCurrentBlock(challenge.blockNumber)
         setTimeLeft(challenge.msLeft)
-
-        // Đánh dấu server đã kết nối
         setConnectionStatus({ connected: true, checking: false })
 
-        if (address && /^0x[a-fA-F0-9]{40}$/.test(address)) {
-          const status = await apiClient.getStatus(address)
-          setBalance(status.balanceMicro)
-
-          if (miningManager && isRunning) {
-            miningManager.updateChallenge({
-              address,
-              blockNumber: challenge.blockNumber,
-              seedHex: challenge.seedHex,
-              difficultyBits: challenge.difficultyBits,
-            })
-          }
+        // update miningManager's challenge if mining
+        if (address && /^0x[a-fA-F0-9]{40}$/.test(address) && miningManager && isRunning) {
+          miningManager.updateChallenge({
+            address,
+            blockNumber: challenge.blockNumber,
+            seedHex: challenge.seedHex,
+            difficultyBits: challenge.difficultyBits,
+          })
         }
 
-        // Gọi lại đúng lúc block mới (msLeft) để bắt block mới kịp thời
-        timeout = setTimeout(updateData, challenge.msLeft + 200)
+        // schedule next update right after block boundary (+200ms slack)
+        const nextDelay = Math.max(200, challenge.msLeft + 200)
+        timeout = window.setTimeout(updateChallenge, nextDelay)
       } catch (err: any) {
-        console.error("Failed to update data:", err)
+        console.error("Failed to fetch challenge:", err)
         setConnectionStatus({ connected: false, checking: false })
 
-        // Retry sau 2s nếu lỗi
-        timeout = setTimeout(updateData, 2000)
+        // retry after short delay (backoff)
+        timeout = window.setTimeout(updateChallenge, 1500)
       }
     }
 
-    // Luôn poll tối thiểu mỗi 500ms (phục vụ submit shares nhanh)
-    interval = setInterval(() => {
-      updateData()
-    }, 500)
-
-    // Chạy ngay khi mount
-    updateData()
+    updateChallenge()
 
     return () => {
-      clearTimeout(timeout)
-      clearInterval(interval)
+      mounted = false
+      if (timeout) {
+        clearTimeout(timeout)
+      }
     }
-  }, [address, isRunning, miningManager])
+  }, [address, isRunning, miningManager, apiClient])
 
+  // Poll user status/balance less frequently (every 2000ms) to avoid overloading server
+  useEffect(() => {
+    let interval: number | undefined
+    let mounted = true
 
+    const doStatusPoll = async () => {
+      if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) return
+      try {
+        const status = await apiClient.getStatus(address)
+        if (!mounted) return
+        setBalance(status.balanceMicro)
+        // also update server connection flag if success
+        setConnectionStatus((prev) => ({ ...prev, connected: true, checking: false }))
+      } catch (err) {
+        // don't spam errors; mark disconnected
+        setConnectionStatus((prev) => ({ ...prev, connected: false, checking: false }))
+      }
+    }
+
+    interval = window.setInterval(doStatusPoll, 2000)
+    // run once immediately
+    doStatusPoll().catch(() => {})
+
+    return () => {
+      mounted = false
+      if (interval) clearInterval(interval)
+    }
+  }, [address, apiClient])
+
+  // Queue processor: pick pending shares and attempt submit with exponential backoff
+  useEffect(() => {
+    const processQueue = async () => {
+      if (!pendingSharesRef.current || pendingSharesRef.current.length === 0) return
+
+      const now = Date.now()
+      const maxPerTick = 4 // limit how many submits we try per tick to avoid spikes
+      let processed = 0
+
+      // iterate over queue by index (we'll mutate as needed)
+      for (let i = 0; i < pendingSharesRef.current.length && processed < maxPerTick; ) {
+        const item = pendingSharesRef.current[i]
+        if (item.nextAttempt > now) {
+          i++
+          continue
+        }
+
+        const { share } = item
+
+        try {
+          // Submit share to server (server will accept with its current block internally)
+          await apiClient.submitShare(share.address, share.nonce)
+          // success -> remove from queue
+          pendingSharesRef.current.splice(i, 1)
+          processed++
+          setStatus("Share submitted")
+          setTimeout(() => setStatus(""), 1200)
+        } catch (err: any) {
+          // submission failed -> schedule retry with exponential backoff
+          item.attempts = (item.attempts || 0) + 1
+          // base 800ms * 2^attempts, cap at 60s
+          const backoff = Math.min(60000, 800 * Math.pow(2, Math.max(0, item.attempts - 1)))
+          item.nextAttempt = Date.now() + backoff
+
+          // If server returned a permanent client error (400s except 429), then drop share
+          const msg = err?.message || ""
+          const isPermanent =
+            msg.includes("Invalid") ||
+            msg.includes("Insufficient") ||
+            msg.includes("Duplicate") ||
+            msg.includes("Invalid nonce") ||
+            msg.includes("Invalid Ethereum address")
+
+          if (isPermanent) {
+            console.warn("[v0] Dropping share due to permanent error:", msg)
+            pendingSharesRef.current.splice(i, 1)
+            // do not increment i since we removed current item
+          } else {
+            // transient error -> keep in queue and move to next item
+            i++
+          }
+
+          // safety: after many attempts drop to avoid infinite memory growth
+          if (item.attempts >= 8) {
+            console.warn("[v0] Dropping share after too many attempts:", item)
+            const idx = pendingSharesRef.current.indexOf(item)
+            if (idx >= 0) pendingSharesRef.current.splice(idx, 1)
+          }
+        }
+      }
+
+      // update pending count state if changed
+      setPendingCount(pendingSharesRef.current.length)
+    }
+
+    // run periodically to process queue
+    queueTimerRef.current = window.setInterval(() => {
+      processQueue().catch((e) => console.error("Queue processing error:", e))
+    }, 1500)
+
+    // try one immediate processing pass
+    processQueue().catch(() => {})
+
+    return () => {
+      if (queueTimerRef.current) {
+        clearInterval(queueTimerRef.current)
+        queueTimerRef.current = null
+      }
+    }
+  }, [apiClient])
 
   // Mining controls
   const startMining = useCallback(async () => {
@@ -209,13 +352,24 @@ export default function PoWFaucetPage() {
       return
     }
 
+    // Allow mining even if server is not currently connected.
     if (!connectionStatus.connected) {
-      //setError("Cannot start mining: Server is not connected. Please check your server connection.")
-      return
+      console.warn("Server not connected — mining will run locally and queue shares for later submission.")
+      setStatus("Mining locally (server offline). Shares will be queued.")
+      setTimeout(() => setStatus(""), 2500)
     }
 
     try {
-      const challenge = await apiClient.getChallenge()
+      const challenge = await apiClient.getChallenge().catch((e) => {
+        // If challenge fetch fails, start mining anyway with last-known block info (miningManager will update when challenge returns)
+        console.warn("Failed to fetch challenge before start:", e?.message || e)
+        return {
+          blockNumber: currentBlock,
+          seedHex: "",
+          difficultyBits: 18,
+        }
+      })
+
       console.log("[v0] Starting mining with challenge:", {
         address,
         blockNumber: challenge.blockNumber,
@@ -233,17 +387,20 @@ export default function PoWFaucetPage() {
         },
         hashRate,
       )
-      //setError("")
-      //setStatus("Mining started!")
-    } catch (err) {
-      //setError(`Failed to start mining: ${err.message}`)
+      // reset error/status
+      setError("")
+      // setStatus("Mining started!")
+    } catch (err: any) {
+      console.error("Failed to start mining:", err)
+      setError(`Failed to start mining: ${err?.message || err}`)
     }
-  }, [miningManager, address, hashRate, apiClient, connectionStatus.connected])
+  }, [miningManager, address, hashRate, apiClient, connectionStatus.connected, currentBlock])
 
   const stopMining = useCallback(() => {
     if (miningManager) {
       miningManager.stopMining()
       setStatus("Mining stopped")
+      setTimeout(() => setStatus(""), 1500)
     }
   }, [miningManager])
 
@@ -285,8 +442,8 @@ export default function PoWFaucetPage() {
       setStatus(`Withdrawal requested! Net amount: ${result.netAmount / 1e6} tokens`)
       setWithdrawAmount("")
       setError("")
-    } catch (err) {
-      setError(`Withdrawal failed: ${err.message}`)
+    } catch (err: any) {
+      setError(`Withdrawal failed: ${err?.message || err}`)
     }
   }, [address, withdrawAmount, apiClient])
 
@@ -308,6 +465,10 @@ export default function PoWFaucetPage() {
                   : "Server disconnected"}
             </span>
           </div>
+
+          {pendingCount > 0 && (
+            <div className="text-xs text-muted-foreground">Pending shares queued: {pendingCount}</div>
+          )}
         </div>
 
         {/* Status Alerts */}
@@ -320,8 +481,7 @@ export default function PoWFaucetPage() {
         {!connectionStatus.connected && !connectionStatus.checking && (
           <Alert>
             <AlertDescription>
-              <strong>Server not running:</strong> Cannot connect to the mining server. Make sure your backend server is
-              running and accessible at the configured endpoint.
+              <strong>Server not running:</strong> Mining will continue locally and queue shares. Check your backend server when convenient.
             </AlertDescription>
           </Alert>
         )}
