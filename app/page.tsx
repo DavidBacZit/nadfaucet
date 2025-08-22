@@ -46,7 +46,7 @@ export default function PoWFaucetPage() {
   const [error, setError] = useState("")
   const [miningManager, setMiningManager] = useState<MiningManager | null>(null)
   const [apiClient] = useState(
-    () => new FaucetApiClient("https://applicable-reproduction-examined-grace.trycloudflare.com/"),
+    () => new FaucetApiClient("https://applicable-reproduction-examined-grace.trycloudflare.com"),
   )
   const [connectionStatus, setConnectionStatus] = useState({ connected: false, checking: true })
 
