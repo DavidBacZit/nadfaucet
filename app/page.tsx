@@ -31,7 +31,7 @@ export default function PoWFaucetPage() {
   const [error, setError] = useState("")
   const [miningManager, setMiningManager] = useState<MiningManager | null>(null)
   const [apiClient] = useState(
-    () => new FaucetApiClient("http://advisory-convergence-custody-outputs.trycloudflare.com"),
+    () => new FaucetApiClient("https://advisory-convergence-custody-outputs.trycloudflare.com"),
   )
   const [connectionStatus, setConnectionStatus] = useState({ connected: false, checking: true })
 
