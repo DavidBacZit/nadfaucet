@@ -28,6 +28,7 @@ type PendingShareItem = {
 export default function PoWFaucetPage() {
   // State management
   const [address, setAddress] = useState("")
+  // total desired H/s
   const [hashRate, setHashRate] = useState(1)
   const [isRunning, setIsRunning] = useState(false)
   const [balance, setBalance] = useState(0)
@@ -56,6 +57,15 @@ export default function PoWFaucetPage() {
 
   // Reconnect timer ref
   const reconnectTimer = useRef<number | null>(null)
+
+  // --- FRONTEND LIMITS FOR WORKERS/HASHRATE ---
+  const MAX_PER_WORKER_RATE = 5 // H/s per worker cap
+  const ABSOLUTE_MAX_WORKERS = 256
+  const hw = typeof navigator !== "undefined" ? navigator.hardwareConcurrency || 4 : 4
+  const RECOMMENDED_MAX_WORKERS = Math.max(1, Math.floor(hw * 4))
+
+  const maxAllowedHashRate = MAX_PER_WORKER_RATE * ABSOLUTE_MAX_WORKERS // hard limit
+  const recommendedMaxHashRate = MAX_PER_WORKER_RATE * RECOMMENDED_MAX_WORKERS
 
   // Initialize mining manager
   useEffect(() => {
@@ -404,25 +414,33 @@ export default function PoWFaucetPage() {
     }
   }, [miningManager])
 
+  // Utility: clamp hashRate to allowed range
+  const clampHashRate = useCallback((value: number) => {
+    const normalized = Number.isFinite(value) ? Math.max(1, Math.floor(value)) : 1
+    const clamped = Math.min(normalized, maxAllowedHashRate)
+    return clamped
+  }, [])
+
   const updateHashRate = useCallback(
     (newRate: number) => {
-      setHashRate(newRate)
+      const clamped = clampHashRate(newRate)
+      setHashRate(clamped)
       if (miningManager && isRunning) {
-        miningManager.updateHashRate(newRate)
+        miningManager.updateHashRate(clamped)
       }
     },
-    [miningManager, isRunning],
+    [miningManager, isRunning, clampHashRate],
   )
 
   const incrementHashRate = useCallback(() => {
-    const newRate = hashRate + 1
+    const newRate = clampHashRate(hashRate + 1)
     updateHashRate(newRate)
-  }, [hashRate, updateHashRate])
+  }, [hashRate, updateHashRate, clampHashRate])
 
   const decrementHashRate = useCallback(() => {
-    const newRate = Math.max(hashRate - 1, 1)
+    const newRate = Math.max(clampHashRate(hashRate - 1), 1)
     updateHashRate(newRate)
-  }, [hashRate, updateHashRate])
+  }, [hashRate, updateHashRate, clampHashRate])
 
   // Withdrawal
   const requestWithdrawal = useCallback(async () => {
@@ -446,6 +464,8 @@ export default function PoWFaucetPage() {
       setError(`Withdrawal failed: ${err?.message || err}`)
     }
   }, [address, withdrawAmount, apiClient])
+
+  const estimatedWorkers = Math.ceil(hashRate / MAX_PER_WORKER_RATE)
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -512,7 +532,7 @@ export default function PoWFaucetPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="hashrate">Hash Rate (Workers)</Label>
+                <Label htmlFor="hashrate">Hash Rate (H/s)</Label>
                 <div className="flex items-center gap-2">
                   <Button
                     type="button"
@@ -532,7 +552,8 @@ export default function PoWFaucetPage() {
                     onChange={(e) => {
                       const value = Number(e.target.value)
                       if (!isNaN(value) && value >= 1) {
-                        updateHashRate(value)
+                        const clamped = clampHashRate(value)
+                        updateHashRate(clamped)
                       } else if (e.target.value === "") {
                         setHashRate(1)
                       }
@@ -541,9 +562,12 @@ export default function PoWFaucetPage() {
                       const value = Number(e.target.value)
                       if (isNaN(value) || value < 1) {
                         updateHashRate(1)
+                      } else {
+                        updateHashRate(clampHashRate(value))
                       }
                     }}
                     className="text-center font-mono"
+                    max={maxAllowedHashRate}
                   />
                   <Button
                     type="button"
@@ -555,6 +579,15 @@ export default function PoWFaucetPage() {
                     +
                   </Button>
                 </div>
+
+                <div className="text-xs text-muted-foreground">
+                  Estimated workers: <span className="font-mono">{estimatedWorkers}</span> (max per worker: {MAX_PER_WORKER_RATE} H/s).
+                  <div>Max allowed H/s: {maxAllowedHashRate} ({ABSOLUTE_MAX_WORKERS} workers max). Recommended ≤ {recommendedMaxHashRate} ({RECOMMENDED_MAX_WORKERS} workers).</div>
+                </div>
+
+                {hashRate > recommendedMaxHashRate && (
+                  <div className="text-xs text-yellow-600">Warning: requested rate exceeds recommended workers ({RECOMMENDED_MAX_WORKERS}). This may cause high resource usage.</div>
+                )}
               </div>
 
               <div className="flex gap-2">
