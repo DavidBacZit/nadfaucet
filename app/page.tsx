@@ -383,29 +383,14 @@ export default function PoWFaucetPage() {
                   <span className="font-mono">{currentBlock}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Time Left:</span>
+                  <span className="text-sm text-muted-foreground">Block production speed:</span>
                   <span className="font-mono">
-                    {connectionStatus.connected ? `${Math.max(0.4, timeLeft / 1000).toFixed(1)}s` : "40000s"}
+                    {connectionStatus.connected ? "12s" : "40000s"}
                   </span>
                 </div>
               </div>
 
               <Separator />
-
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Lucky Winner:</span>
-                  <span>50 tokens/block</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Shared Pool:</span>
-                  <span>50 tokens/block</span>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  1 lucky person gets 50 tokens/block (more workers = higher winning rate) • Remaining 50 tokens/block
-                  shared to everyone according to worker contribution ratio
-                </div>
-              </div>
             </CardContent>
           </Card>
 
@@ -413,12 +398,11 @@ export default function PoWFaucetPage() {
           <Card>
             <CardHeader>
               <CardTitle>Balance & Withdrawal</CardTitle>
-              <CardDescription>Manage your earned tokens</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{(balance / 1e6).toFixed(6)}</div>
-                <div className="text-sm text-muted-foreground">Tokens</div>
+                <div className="text-2xl font-bold text-primary">{(balance / 1e6).toFixed(0)}</div>
+                <div className="text-sm text-muted-foreground">$NF</div>
               </div>
 
               <Separator />
@@ -432,7 +416,7 @@ export default function PoWFaucetPage() {
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
                 />
-                <div className="text-xs text-muted-foreground">Minimum: 1001 tokens (1000 token fee)</div>
+                <div className="text-xs text-muted-foreground">Minimum: 1001 $NF (Fee: 1000 $NF)</div>
               </div>
 
               <Button onClick={requestWithdrawal} className="w-full" variant="secondary">
@@ -445,7 +429,6 @@ export default function PoWFaucetPage() {
           <Card className="md:col-span-2 lg:col-span-3">
             <CardHeader>
               <CardTitle>Mining Statistics</CardTitle>
-              <CardDescription>Real-time mining performance metrics</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
