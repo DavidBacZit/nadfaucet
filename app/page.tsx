@@ -111,17 +111,14 @@ export default function PoWFaucetPage() {
 
         // nếu thất bại thì đặt retry sau 12s
         if (!result.connected) {
-          // clear timer nếu có
           if (reconnectTimer.current) {
             clearTimeout(reconnectTimer.current)
             reconnectTimer.current = null
           }
           reconnectTimer.current = window.setTimeout(() => {
-            // gọi lại
             checkConnection().catch(() => {})
           }, 12000)
         } else {
-          // nếu đã connected thì clear timer (nếu còn)
           if (reconnectTimer.current) {
             clearTimeout(reconnectTimer.current)
             reconnectTimer.current = null
@@ -129,7 +126,6 @@ export default function PoWFaucetPage() {
         }
       } catch (err) {
         if (!mounted) return
-        // khi có lỗi mạng, đặt state checking = false và retry
         setConnectionStatus({ connected: false, checking: false })
         if (reconnectTimer.current) {
           clearTimeout(reconnectTimer.current)
@@ -150,9 +146,6 @@ export default function PoWFaucetPage() {
         reconnectTimer.current = null
       }
     }
-  }, [apiClient])
-
-    checkConnection()
   }, [apiClient])
 
   // Update challenge and balance periodically
