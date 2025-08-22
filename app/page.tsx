@@ -150,14 +150,16 @@ export default function PoWFaucetPage() {
 
   useEffect(() => {
     let timeout: NodeJS.Timeout
+    let interval: NodeJS.Timeout
 
     const updateData = async () => {
-      if (!connectionStatus.connected) return
-
       try {
         const challenge = await apiClient.getChallenge()
         setCurrentBlock(challenge.blockNumber)
         setTimeLeft(challenge.msLeft)
+
+        // Đánh dấu server đã kết nối
+        setConnectionStatus({ connected: true, checking: false })
 
         if (address && /^0x[a-fA-F0-9]{40}$/.test(address)) {
           const status = await apiClient.getStatus(address)
@@ -173,25 +175,31 @@ export default function PoWFaucetPage() {
           }
         }
 
-        // Gọi lại đúng lúc block mới
+        // Gọi lại đúng lúc block mới (msLeft) để bắt block mới kịp thời
         timeout = setTimeout(updateData, challenge.msLeft + 200)
       } catch (err: any) {
         console.error("Failed to update data:", err)
-        if (
-          err.message.includes("Cannot connect to server") ||
-          err.message.includes("Network error")
-        ) {
-          setConnectionStatus({ connected: false, checking: false })
-        }
+        setConnectionStatus({ connected: false, checking: false })
 
         // Retry sau 2s nếu lỗi
         timeout = setTimeout(updateData, 2000)
       }
     }
 
+    // Luôn poll tối thiểu mỗi 500ms (phục vụ submit shares nhanh)
+    interval = setInterval(() => {
+      updateData()
+    }, 500)
+
+    // Chạy ngay khi mount
     updateData()
-    return () => clearTimeout(timeout)
-  }, [address, miningManager, isRunning, apiClient, connectionStatus.connected])
+
+    return () => {
+      clearTimeout(timeout)
+      clearInterval(interval)
+    }
+  }, [address, isRunning, miningManager])
+
 
 
   // Mining controls
