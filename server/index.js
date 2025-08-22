@@ -61,17 +61,18 @@ app.get("/challenge", (req, res) => {
 
 // POST /submit-proof - Submit a mining share
 app.post("/submit-proof", submitLimiter, (req, res) => {
-  const { address, nonce } = req.body
+  const { address, blockNumber, nonce } = req.body
+  const currentBlock = blockProcessor.getCurrentBlockNumber()
+  const currentSeed = blockProcessor.getCurrentSeedHex()
 
-  // Validate input presence
-  if (!address || !nonce) {
+  // Validate input
+  if (!address || !blockNumber || !nonce) {
     return res.status(400).json({
       ok: false,
-      error: "Missing required fields: address, nonce",
+      error: "Missing required fields: address, blockNumber, nonce",
     })
   }
 
-  // Validate address format
   if (!isValidAddress(address)) {
     return res.status(400).json({
       ok: false,
@@ -79,60 +80,59 @@ app.post("/submit-proof", submitLimiter, (req, res) => {
     })
   }
 
-  try {
-    // Use server's current block/seed at time of submission
-    const currentBlock = blockProcessor.getCurrentBlockNumber()
-    const currentSeed = blockProcessor.getCurrentSeedHex()
-
-    // Per-address per-block share limit
-    const currentShares = db.getShareCountForAddress(currentBlock, address)
-    if (currentShares >= config.MAX_SHARES_PB) {
-      return res.status(429).json({
-        ok: false,
-        error: `Maximum shares per block exceeded (${config.MAX_SHARES_PB})`,
-      })
-    }
-
-    // Compute PoW using server's currentSeed/currentBlock
-    const { hash, leadingZeroBits } = computePoWHash(address, currentBlock, currentSeed, nonce)
-
-    if (leadingZeroBits < config.DIFFICULTY_BITS) {
-      return res.status(400).json({
-        ok: false,
-        error: "Insufficient proof-of-work",
-        required: config.DIFFICULTY_BITS,
-        provided: leadingZeroBits,
-      })
-    }
-
-    // Insert share (DB-level duplicate prevention expected)
-    const inserted = db.insertShare(currentBlock, address, nonce, hash)
-    if (!inserted) {
-      return res.status(409).json({
-        ok: false,
-        error: "Duplicate share",
-      })
-    }
-
-    console.log(`[v0] Share accepted: ${address} block=${currentBlock} difficulty=${leadingZeroBits} hash=${hash}`)
-
-    return res.json({
-      ok: true,
-      accepted: true,
-      blockNumber: currentBlock,
-      leadingZeroBits,
-      hash,
-    })
-  } catch (err) {
-    // Distinguish transient vs permanent errors
-    console.error("[v0] Error handling submit-proof:", err)
-    // If DB or other transient error, return 503 so clients can retry/backoff
-    return res.status(503).json({
+  if (blockNumber !== currentBlock) {
+    return res.status(400).json({
       ok: false,
-      error: "Server transient error, please retry",
-      details: err.message,
+      error: "Invalid block number",
+      currentBlock,
     })
   }
+
+  if (typeof nonce !== "string" || nonce.length === 0) {
+    return res.status(400).json({
+      ok: false,
+      error: "Invalid nonce format",
+    })
+  }
+
+  // Check per-address per-block share limit
+  const currentShares = db.getShareCountForAddress(blockNumber, address)
+  if (currentShares >= config.MAX_SHARES_PB) {
+    return res.status(429).json({
+      ok: false,
+      error: `Maximum shares per block exceeded (${config.MAX_SHARES_PB})`,
+    })
+  }
+
+  // Compute and verify proof-of-work
+  const { hash, leadingZeroBits } = computePoWHash(address, blockNumber, currentSeed, nonce)
+
+  if (leadingZeroBits < config.DIFFICULTY_BITS) {
+    return res.status(400).json({
+      ok: false,
+      error: "Insufficient proof-of-work",
+      required: config.DIFFICULTY_BITS,
+      provided: leadingZeroBits,
+    })
+  }
+
+  // Insert share (will fail if duplicate)
+  const inserted = db.insertShare(blockNumber, address, nonce, hash)
+  if (!inserted) {
+    return res.status(409).json({
+      ok: false,
+      error: "Duplicate share",
+    })
+  }
+
+  console.log(`[v0] Share accepted: ${address} block=${blockNumber} difficulty=${leadingZeroBits} hash=${hash}`)
+
+  res.json({
+    ok: true,
+    accepted: true,
+    leadingZeroBits,
+    hash,
+  })
 })
 
 // GET /status - Get user status and current block info
