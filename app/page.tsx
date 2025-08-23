@@ -236,7 +236,7 @@ export default function PoWFaucetPage() {
         }
 
         // Gọi lại đúng lúc block mới (msLeft) để bắt block mới kịp thời
-        timeout = setTimeout(updateData, challenge.msLeft + 100)
+        timeout = setTimeout(updateData, challenge.msLeft + 50)
       } catch (err: any) {
         console.error("Failed to update data:", err)
         setConnectionStatus({ connected: false, checking: false })
