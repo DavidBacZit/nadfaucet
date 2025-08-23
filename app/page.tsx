@@ -236,7 +236,7 @@ export default function PoWFaucetPage() {
         }
 
         // Gọi lại đúng lúc block mới (msLeft) để bắt block mới kịp thời
-        timeout = setTimeout(updateData, challenge.msLeft + 200)
+        timeout = setTimeout(updateData, challenge.msLeft + 100)
       } catch (err: any) {
         console.error("Failed to update data:", err)
         setConnectionStatus({ connected: false, checking: false })
@@ -252,7 +252,7 @@ export default function PoWFaucetPage() {
     // Luôn poll tối thiểu mỗi 500ms (phục vụ submit shares nhanh)
     interval = setInterval(() => {
       updateData()
-    }, 500)
+    }, 1000)
 
     // Chạy ngay khi mount
     updateData()
