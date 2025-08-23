@@ -31,7 +31,7 @@ export default function PoWFaucetPage() {
   const [error, setError] = useState("")
   const [miningManager, setMiningManager] = useState<MiningManager | null>(null)
   const [apiClient] = useState(
-    () => new FaucetApiClient("https://works-babes-up-norm.trycloudflare.com"),
+    () => new FaucetApiClient("https://nadfaucet.fun"),
   )
   const [connectionStatus, setConnectionStatus] = useState({ connected: false, checking: true })
 
