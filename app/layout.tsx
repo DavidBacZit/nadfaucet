@@ -10,8 +10,8 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "PoW Faucet",
-  description: "Web-based Proof of Work Mining Faucet",
+  title: "NadFaucet",
+  description: "Become a validator and earn $MON",
   generator: "v0.app",
 }
 
