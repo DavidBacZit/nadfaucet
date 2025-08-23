@@ -249,11 +249,6 @@ export default function PoWFaucetPage() {
       }
     }
 
-    // Luôn poll tối thiểu mỗi 500ms (phục vụ submit shares nhanh)
-    interval = setInterval(() => {
-      updateData()
-    }, 1000)
-
     // Chạy ngay khi mount
     updateData()
 
