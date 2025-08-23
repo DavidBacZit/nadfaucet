@@ -89,26 +89,33 @@ export default function PoWFaucetPage() {
         // Set up event handlers
         manager.onShareFound = async (share) => {
           try {
-            console.log("[v0] Share found:", {
-              address: share.address,
-              blockNumber: share.blockNumber,
-              leadingZeroBits: share.leadingZeroBits,
-              nonce: share.nonce,
-              difficulty: share.difficultyBits,
-              hashHex: share.hashHex,
-            })
-
             const result = await apiClient.submitShare(share.address, share.blockNumber, share.nonce)
-
             console.log("[v0] Share submitted successfully:", result)
-
-            //setStatus(`Share submitted! Difficulty: ${share.leadingZeroBits} bits`)
             setTimeout(() => setStatus(""), 3000)
           } catch (err: any) {
             console.log("[v0] Share submission failed:", err?.message || err)
-            //setError(`Failed to submit share: ${err.message}`)
+
+            // Nếu block sai → fetch lại ngay
+            if (err?.response?.error === "Invalid block number") {
+              try {
+                const challenge = await apiClient.getChallenge()
+                console.warn("[fix] Resynced challenge:", challenge)
+
+                miningManager?.updateChallenge({
+                  address,
+                  blockNumber: challenge.blockNumber,
+                  seedHex: challenge.seedHex,
+                  difficultyBits: challenge.difficultyBits,
+                })
+                setCurrentBlock(challenge.blockNumber)
+                setTimeLeft(challenge.msLeft)
+              } catch (e) {
+                console.error("Failed to refresh challenge after invalid block:", e)
+              }
+            }
           }
         }
+
 
         manager.onStatsUpdate = (stats) => {
           setMiningStats(stats)
