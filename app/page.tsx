@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { MiningManager } from "@/lib/mining-manager"
 import { FaucetApiClient } from "@/lib/api-client"
+
 export default function PoWFaucetPage() {
   // State management
   const [address, setAddress] = useState("")
@@ -31,11 +32,54 @@ export default function PoWFaucetPage() {
   const [error, setError] = useState("")
   const [miningManager, setMiningManager] = useState<MiningManager | null>(null)
   const [apiClient] = useState(
-    () => new FaucetApiClient("https://nadfaucet.fun"),
+    () => new FaucetApiClient("https://api.nadfaucet.fun"),
   )
   const [connectionStatus, setConnectionStatus] = useState({ connected: false, checking: true })
 
-  // Initialize mining manager
+  // Track consecutive connection failures
+  const failureCountRef = useRef(0)
+  // Reconnect timer ref
+  const reconnectTimer = useRef<number | null>(null)
+
+  // Helper: when repeated failures happen, lower workers to 0 (or 1 fallback)
+  const lowerWorkersDueToFailures = useCallback((target = 0) => {
+    try {
+      // try set to target (0)
+      setHashRate(target)
+      if (miningManager) {
+        // some implementations may not accept 0; wrap in try/catch
+        try {
+          miningManager.updateHashRate(target)
+        } catch (err) {
+          // fallback to 1
+          const fallback = 1
+          setHashRate(fallback)
+          try {
+            miningManager.updateHashRate(fallback)
+          } catch (_) {}
+        }
+      }
+      setStatus("API unreachable repeatedly — workers reduced to conserve resources")
+    } catch (err) {
+      // final fallback
+      setHashRate(1)
+      try {
+        miningManager?.updateHashRate(1)
+      } catch (_) {}
+      setStatus("API unreachable repeatedly — workers reduced (fallback to 1)")
+    }
+  }, [miningManager])
+
+  // Increment failure counter and potentially lower workers
+  const incrementFailureCount = useCallback(() => {
+    failureCountRef.current += 1
+    if (failureCountRef.current >= 4) {
+      lowerWorkersDueToFailures(0)
+      // reset counter so we don't repeatedly re-apply
+      failureCountRef.current = 0
+    }
+  }, [lowerWorkersDueToFailures])
+
   useEffect(() => {
     const initMining = async () => {
       try {
@@ -60,8 +104,8 @@ export default function PoWFaucetPage() {
 
             //setStatus(`Share submitted! Difficulty: ${share.leadingZeroBits} bits`)
             setTimeout(() => setStatus(""), 3000)
-          } catch (err) {
-            console.log("[v0] Share submission failed:", err.message)
+          } catch (err: any) {
+            console.log("[v0] Share submission failed:", err?.message || err)
             //setError(`Failed to submit share: ${err.message}`)
           }
         }
@@ -82,7 +126,7 @@ export default function PoWFaucetPage() {
         }
 
         setMiningManager(manager)
-      } catch (err) {
+      } catch (err: any) {
         //setError(`Failed to initialize mining: ${err.message}`)
       }
     }
@@ -96,9 +140,6 @@ export default function PoWFaucetPage() {
     }
   }, [])
 
-  // Reconnect timer ref
-  const reconnectTimer = useRef<number | null>(null)
-
   useEffect(() => {
     let mounted = true
 
@@ -109,15 +150,22 @@ export default function PoWFaucetPage() {
 
         setConnectionStatus({ ...result, checking: false })
 
-        // nếu thất bại thì đặt retry sau 12s
+        // reset failure counter on success
+        if (result.connected) {
+          failureCountRef.current = 0
+        }
+
+        // nếu thất bại thì đặt retry sau 15s
         if (!result.connected) {
+          incrementFailureCount()
+
           if (reconnectTimer.current) {
             clearTimeout(reconnectTimer.current)
             reconnectTimer.current = null
           }
           reconnectTimer.current = window.setTimeout(() => {
             checkConnection().catch(() => {})
-          }, 12000)
+          }, 15000)
         } else {
           if (reconnectTimer.current) {
             clearTimeout(reconnectTimer.current)
@@ -127,13 +175,15 @@ export default function PoWFaucetPage() {
       } catch (err) {
         if (!mounted) return
         setConnectionStatus({ connected: false, checking: false })
+        incrementFailureCount()
+
         if (reconnectTimer.current) {
           clearTimeout(reconnectTimer.current)
           reconnectTimer.current = null
         }
         reconnectTimer.current = window.setTimeout(() => {
           checkConnection().catch(() => {})
-        }, 12000)
+        }, 15000)
       }
     }
 
@@ -146,7 +196,7 @@ export default function PoWFaucetPage() {
         reconnectTimer.current = null
       }
     }
-  }, [apiClient])
+  }, [apiClient, incrementFailureCount])
 
   useEffect(() => {
     let timeout: NodeJS.Timeout
@@ -160,6 +210,9 @@ export default function PoWFaucetPage() {
 
         // Đánh dấu server đã kết nối
         setConnectionStatus({ connected: true, checking: false })
+
+        // reset failure counter on success
+        failureCountRef.current = 0
 
         if (address && /^0x[a-fA-F0-9]{40}$/.test(address)) {
           const status = await apiClient.getStatus(address)
@@ -181,8 +234,11 @@ export default function PoWFaucetPage() {
         console.error("Failed to update data:", err)
         setConnectionStatus({ connected: false, checking: false })
 
-        // Retry sau 2s nếu lỗi
-        timeout = setTimeout(updateData, 2000)
+        // tăng counter lỗi
+        incrementFailureCount()
+
+        // Retry sau 15s nếu lỗi
+        timeout = setTimeout(updateData, 15000)
       }
     }
 
@@ -198,14 +254,18 @@ export default function PoWFaucetPage() {
       clearTimeout(timeout)
       clearInterval(interval)
     }
-  }, [address, isRunning, miningManager])
-
+  }, [address, isRunning, miningManager, incrementFailureCount])
 
 
   // Mining controls
   const startMining = useCallback(async () => {
     if (!miningManager || !address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
       setError("Please enter a valid Ethereum address")
+      return
+    }
+
+    if (hashRate <= 0) {
+      setError("Cannot start mining with 0 workers — increase hash rate to start")
       return
     }
 
@@ -235,7 +295,7 @@ export default function PoWFaucetPage() {
       )
       //setError("")
       //setStatus("Mining started!")
-    } catch (err) {
+    } catch (err: any) {
       //setError(`Failed to start mining: ${err.message}`)
     }
   }, [miningManager, address, hashRate, apiClient, connectionStatus.connected])
@@ -251,7 +311,11 @@ export default function PoWFaucetPage() {
     (newRate: number) => {
       setHashRate(newRate)
       if (miningManager && isRunning) {
-        miningManager.updateHashRate(newRate)
+        try {
+          miningManager.updateHashRate(newRate)
+        } catch (err) {
+          // ignore if manager doesn't accept the value
+        }
       }
     },
     [miningManager, isRunning],
@@ -263,7 +327,7 @@ export default function PoWFaucetPage() {
   }, [hashRate, updateHashRate])
 
   const decrementHashRate = useCallback(() => {
-    const newRate = Math.max(hashRate - 1, 1)
+    const newRate = Math.max(hashRate - 1, 0)
     updateHashRate(newRate)
   }, [hashRate, updateHashRate])
 
@@ -285,7 +349,7 @@ export default function PoWFaucetPage() {
       setStatus(`Withdrawal requested! Net amount: ${result.netAmount / 1e6} tokens`)
       setWithdrawAmount("")
       setError("")
-    } catch (err) {
+    } catch (err: any) {
       setError(`Withdrawal failed: ${err.message}`)
     }
   }, [address, withdrawAmount, apiClient])
@@ -359,7 +423,7 @@ export default function PoWFaucetPage() {
                     variant="outline"
                     size="sm"
                     onClick={decrementHashRate}
-                    disabled={hashRate <= 1}
+                    disabled={hashRate <= 0}
                     className="px-3 bg-transparent"
                   >
                     -
@@ -367,20 +431,20 @@ export default function PoWFaucetPage() {
                   <Input
                     id="hashrate"
                     type="number"
-                    min="1"
+                    min="0"
                     value={hashRate}
                     onChange={(e) => {
                       const value = Number(e.target.value)
-                      if (!isNaN(value) && value >= 1) {
+                      if (!isNaN(value) && value >= 0) {
                         updateHashRate(value)
                       } else if (e.target.value === "") {
-                        setHashRate(1)
+                        setHashRate(0)
                       }
                     }}
                     onBlur={(e) => {
                       const value = Number(e.target.value)
-                      if (isNaN(value) || value < 1) {
-                        updateHashRate(1)
+                      if (isNaN(value) || value < 0) {
+                        updateHashRate(0)
                       }
                     }}
                     className="text-center font-mono"
