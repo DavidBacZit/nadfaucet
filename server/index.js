@@ -156,7 +156,7 @@ app.get("/status", (req, res) => {
 })
 
 async function processPayout(to, amount) {
-  const provider = new ethers.JsonRpcProvider("https://monad-testnet.g.alchemy.com/v2/mZRji1_VAj-PWv47UisJe")
+  const provider = new ethers.JsonRpcProvider("process.env.RPC_URL")
   const wallet = new ethers.Wallet("process.env.FAUCET_PRIVATE_KEY", provider)
 
   const erc20 = new ethers.Contract(
