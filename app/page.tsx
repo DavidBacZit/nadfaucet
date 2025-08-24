@@ -341,8 +341,8 @@ export default function PoWFaucetPage() {
     }
 
     const amountMicro = Number.parseFloat(withdrawAmount) * 1e6
-    if (amountMicro <= 1000 * 1e6) {
-      setError("Amount must be greater than 1000 tokens (withdrawal fee)")
+    if (amountMicro <= 2100 * 1e6) {
+      setError("Amount must be greater than 2100 tokens (withdrawal fee)")
       return
     }
 
@@ -529,7 +529,7 @@ export default function PoWFaucetPage() {
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
                 />
-                <div className="text-xs text-muted-foreground">Minimum: 1001 $NF (Fee: 1000 $NF)</div>
+                <div className="text-xs text-muted-foreground">Minimum: 2500 $NF (Fee: 2500 $NF)</div>
               </div>
 
               <Button onClick={requestWithdrawal} className="w-full" variant="secondary">
