@@ -4,13 +4,15 @@ export const config = {
   PORT: Number.parseInt(process.env.PORT) || 3000,
 
   // Mining settings
-  BLOCK_TIME_MS: Number.parseInt(process.env.BLOCK_TIME_MS) || 400,
-  DIFFICULTY_BITS: Number.parseInt(process.env.DIFFICULTY_BITS) || 18,
-  MAX_SHARES_PB: Number.parseInt(process.env.MAX_SHARES_PB) || 500,
+  BLOCK_TIME_MS: Number.parseInt(process.env.BLOCK_TIME_MS) || 60000,
+  DIFFICULTY_BITS: Number.parseInt(process.env.DIFFICULTY_BITS) || 1,
+  MAX_SHARES_PB: Number.parseInt(process.env.MAX_SHARES_PB) || 100000,
 
   // Reward settings
-  POOL_A_REWARD_TOKENS: 50,
-  POOL_B_REWARD_TOKENS: 50,
+  POOL_A_REWARD_TOKENS: 27500,
+  POOL_B_REWARD_TOKENS: 17500,
+  POOL_C_REWARD_TOKENS: 9000,
+
   WITHDRAW_FEE_TOKENS: Number.parseInt(process.env.WITHDRAW_FEE_TOKENS) || 1000,
 
   // Optional blockchain settings for payouts

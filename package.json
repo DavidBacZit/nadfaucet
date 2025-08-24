@@ -25,6 +25,8 @@
     "clsx": "^2.1.1",
     "cors": "latest",
     "crypto": "latest",
+    "dotenv": "latest",
+    "ethers": "latest",
     "express": "latest",
     "express-rate-limit": "latest",
     "lucide-react": "^0.454.0",

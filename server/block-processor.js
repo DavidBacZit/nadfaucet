@@ -48,15 +48,12 @@ export class BlockProcessor {
     try {
       console.log(`[v0] Processing block ${blockToProcess}...`)
 
-      // Finalize the current block
       await this.finalizeBlock(blockToProcess)
 
-      // Start new block
       this.currentBlockNumber++
       this.currentSeedHex = generateRandomHex(16)
       this.blockStartTime = Date.now()
 
-      // Update meta and insert new block record
       this.db.setMeta("currentBlockNumber", this.currentBlockNumber.toString())
       this.db.setMeta("currentSeedHex", this.currentSeedHex)
       this.db.insertBlock(this.currentBlockNumber, this.currentSeedHex)
@@ -71,86 +68,136 @@ export class BlockProcessor {
   }
 
   async finalizeBlock(blockNumber) {
-    // Get all shares for this block
     const shares = this.db.getSharesForBlock(blockNumber)
-
+  
     if (shares.length === 0) {
       console.log(`[v0] Block ${blockNumber}: No shares to process`)
       this.db.markBlockProcessed(blockNumber)
       return
     }
 
-    console.log(`[v0] Block ${blockNumber}: Processing ${shares.length} shares`)
-
-    // Group shares by address
     const sharesByAddress = new Map()
     for (const share of shares) {
       const count = sharesByAddress.get(share.address) || 0
       sharesByAddress.set(share.address, count + 1)
     }
-
-    const totalShares = shares.length
+  
+    const addresses = Array.from(sharesByAddress.keys())
     const rewards = new Map()
-
+  
     console.log(`[v0] Block ${blockNumber}: Share distribution:`)
     for (const [address, shareCount] of sharesByAddress) {
-      console.log(`[v0]   ${address}: ${shareCount} shares`)
+      console.log(`[v0] ${address}: ${shareCount} shares`)
     }
-
-    // Pool A: Proportional rewards (50 tokens = 50 * 1e6 micro-tokens)
-    const poolAReward = this.config.POOL_A_REWARD_TOKENS * 1e6
-    console.log(`[v0] Block ${blockNumber}: Pool A distributing ${poolAReward / 1e6} tokens proportionally`)
-
-    for (const [address, shareCount] of sharesByAddress) {
-      const proportionalReward = Math.floor((poolAReward * shareCount) / totalShares)
-      rewards.set(address, (rewards.get(address) || 0) + proportionalReward)
-      console.log(
-        `[v0]   Pool A: ${address} gets ${proportionalReward / 1e6} tokens (${shareCount}/${totalShares} shares)`,
-      )
-    }
-
-    // Pool B: Weighted lottery (50 tokens = 50 * 1e6 micro-tokens)
+  
     const poolBReward = this.config.POOL_B_REWARD_TOKENS * 1e6
-    const addresses = Array.from(sharesByAddress.keys())
-    const weights = addresses.map((addr) => sharesByAddress.get(addr))
-
-    console.log(`[v0] Block ${blockNumber}: Pool B lottery with weights:`, weights)
-
+    const weights = addresses.map(addr => sharesByAddress.get(addr))
     const winnerIndex = selectWeightedRandom(weights)
+    let poolBWinner = null
+  
     if (winnerIndex >= 0) {
-      const winnerAddress = addresses[winnerIndex]
-      rewards.set(winnerAddress, (rewards.get(winnerAddress) || 0) + poolBReward)
+      poolBWinner = addresses[winnerIndex]
+      rewards.set(poolBWinner, (rewards.get(poolBWinner) || 0) + poolBReward)
       console.log(
-        `[v0] Block ${blockNumber}: Pool B winner: ${winnerAddress} gets ${poolBReward / 1e6} tokens (${weights[winnerIndex]} shares, index ${winnerIndex})`,
+        `[v0] Block ${blockNumber}: Pool B winner: ${poolBWinner} gets ${poolBReward / 1e6} tokens`
       )
-    } else {
-      console.log(`[v0] Block ${blockNumber}: Pool B lottery failed - no winner selected`)
     }
 
-    // Apply rewards atomically
+    const poolAReward = this.config.POOL_A_REWARD_TOKENS * 1e6
+    const totalShares = Array.from(sharesByAddress.values()).reduce((a, b) => a + b, 0)
+
+    const adjustedShares = new Map()
+    for (const [address, shareCount] of sharesByAddress) {
+      let adjusted = shareCount
+
+      if (address === poolBWinner) {
+        const totalLoserShares = totalShares - shareCount
+        const penalty = Math.min(totalLoserShares, Math.floor(totalShares / 2))
+        adjusted = Math.floor((shareCount - penalty) / 2)
+        if (adjusted < 0) adjusted = 0
+      }
+
+      if (adjusted > 0) {
+        adjustedShares.set(address, adjusted)
+      }
+    }
+
+    const totalAdjustedShares = Array.from(adjustedShares.values()).reduce((a, b) => a + b, 0)
+
+    if (totalAdjustedShares > 0) {
+      console.log(
+        `[v0] Block ${blockNumber}: Pool A distributing ${poolAReward / 1e6} tokens proportionally (new adjusted shares)`
+      )
+      for (const [address, shareCount] of adjustedShares) {
+        const reward = Math.floor((shareCount / totalAdjustedShares) * poolAReward)
+        rewards.set(address, (rewards.get(address) || 0) + reward)
+        console.log(
+          `[v0] Pool A: ${address} gets ${reward / 1e6} tokens (${shareCount}/${totalAdjustedShares} adjusted shares)`
+        )
+      }
+    }
+  
+    const poolCReward = this.config.POOL_C_REWARD_TOKENS * 1e6
+    let poolCAddresses = addresses.filter(addr => addr !== poolBWinner)
+    const numC = poolCAddresses.length
+    
+    if (numC > 0) {
+      let workerRewards = poolCAddresses.map(addr => ({
+        addr,
+        reward: rewards.get(addr) || 0
+      }))
+    
+      workerRewards.sort((a, b) => a.reward - b.reward)
+    
+      let m = numC
+      for (let i = 1; i < numC; i++) {
+        const left = workerRewards[i - 1].reward + Math.ceil(poolCReward / i)
+        const right = workerRewards[i].reward
+        if (left < right) {
+          m = i
+          break
+        }
+      }
+    
+      const rewardPerUser = Math.floor(poolCReward / m)
+      let remainder = poolCReward % m
+    
+      for (let i = 0; i < m; i++) {
+        let extra = rewardPerUser
+        if (remainder > 0) {
+          extra += 1
+          remainder--
+        }
+        rewards.set(
+          workerRewards[i].addr,
+          (rewards.get(workerRewards[i].addr) || 0) + extra
+        )
+      }
+    
+      console.log(
+        `[v0] Block ${blockNumber}: Pool C distributing ${poolCReward / 1e6} tokens to ${m}/${numC} lowest addresses (~${rewardPerUser / 1e6} each)`
+      )
+    }
+    
     console.log(`[v0] Block ${blockNumber}: Applying rewards to database...`)
     this.applyRewards(rewards)
-
-    // Mark block as processed
     this.db.markBlockProcessed(blockNumber)
-
-    // Log reward summary
+  
     const totalRewardsMicro = Array.from(rewards.values()).reduce((sum, reward) => sum + reward, 0)
-    const totalRewardsTokens = totalRewardsMicro / 1e6
+  
     console.log(
-      `[v0] Block ${blockNumber}: FINAL - Distributed ${totalRewardsTokens} tokens to ${rewards.size} addresses`,
+      `[v0] Block ${blockNumber}: FINAL - Distributed ${totalRewardsMicro / 1e6} tokens to ${rewards.size} addresses`
     )
-
-    // Log individual final rewards
+  
     for (const [address, rewardMicro] of rewards) {
       const rewardTokens = rewardMicro / 1e6
       const shareCount = sharesByAddress.get(address)
-      console.log(`[v0]   FINAL: ${address}: ${rewardTokens} tokens total (${shareCount} shares)`)
+      console.log(`[v0] FINAL: ${address}: ${rewardTokens} tokens total (${shareCount} shares)`)
     }
   }
-
+  
+  
   applyRewards(rewards) {
-    // Use a transaction to ensure atomicity
     const transaction = this.db.db.transaction(() => {
       for (const [address, rewardMicro] of rewards) {
         this.db.updateBalance(address, rewardMicro)
@@ -160,7 +207,6 @@ export class BlockProcessor {
     transaction()
   }
 
-  // Getters for current state (used by API server)
   getCurrentBlockNumber() {
     return this.currentBlockNumber
   }
@@ -178,7 +224,6 @@ export class BlockProcessor {
     return Math.max(0, this.config.BLOCK_TIME_MS - elapsed)
   }
 
-  // Get block statistics
   getBlockStats() {
     return {
       currentBlock: this.currentBlockNumber,
