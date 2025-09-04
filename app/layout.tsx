@@ -12,7 +12,18 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "NadFaucet",
   description: "Become a validator and earn $MON",
-  generator: "v0.app",
+  icons: [
+    {
+      url: '/images/my-icon.png',
+      sizes: '32x32',
+      type: 'image/png',
+    },
+    {
+      url: '/images/my-icon.ico',
+      sizes: 'any',
+      type: 'image/x-icon',
+    },
+  ],
 }
 
 export default function RootLayout({
