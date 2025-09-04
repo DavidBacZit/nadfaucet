@@ -361,18 +361,7 @@ export default function PoWFaucetPage() {
       <div className="mx-auto max-w-6xl space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-foreground">$NF faucet</h1>
           <div className="flex items-center justify-center gap-2">
-            <div
-              className={`w-2 h-2 rounded-full ${connectionStatus.checking ? "bg-yellow-500" : connectionStatus.connected ? "bg-green-500" : "bg-red-500"}`}
-            />
-            <span className="text-sm text-muted-foreground">
-              {connectionStatus.checking
-                ? "Checking server..."
-                : connectionStatus.connected
-                  ? "Server connected"
-                  : "Server disconnected"}
-            </span>
           </div>
         </div>
 
