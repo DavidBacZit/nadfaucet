@@ -14,12 +14,12 @@ export const metadata: Metadata = {
   description: "Become a validator and earn $MON",
   icons: [
     {
-      url: '/images/my-icon.png',
+      url: '/public/images/my-icon.png',
       sizes: '32x32',
       type: 'image/png',
     },
     {
-      url: '/images/my-icon.ico',
+      url: '/public/images/my-icon.ico',
       sizes: 'any',
       type: 'image/x-icon',
     },
