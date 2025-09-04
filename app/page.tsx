@@ -530,6 +530,7 @@ export default function PoWFaucetPage() {
                   onChange={(e) => setWithdrawAmount(e.target.value)}
                 />
                 <div className="text-xs text-muted-foreground">Minimum: 2500 $NF (Fee: 2500 $NF)</div>
+                <div className="text-xs text-muted-foreground">$NF contract: 0xd6521294cf8b18729e6a0e9b0504b25b1b56fed9</div>
               </div>
 
               <Button onClick={requestWithdrawal} className="w-full" variant="secondary">
