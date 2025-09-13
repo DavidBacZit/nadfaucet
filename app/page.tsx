@@ -340,12 +340,6 @@ export default function PoWFaucetPage() {
       return
     }
 
-    const amountMicro = Number.parseFloat(withdrawAmount) * 1e6
-    if (amountMicro <= 2100 * 1e6) {
-      setError("Amount must be greater than 2100 tokens (withdrawal fee)")
-      return
-    }
-
     try {
       const result = await apiClient.requestWithdrawal(address, amountMicro)
       setStatus(`Withdrawal requested! Net amount: ${result.netAmount / 1e6} tokens`)
@@ -518,7 +512,6 @@ export default function PoWFaucetPage() {
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
                 />
-                <div className="text-xs text-muted-foreground">Minimum: 2500 $NF (Fee: 2500 $NF)</div>
                 <div className="text-xs text-muted-foreground">$NF contract: 0xd6521294cf8b18729e6a0e9b0504b25b1b56fed9</div>
               </div>
 
