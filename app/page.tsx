@@ -340,6 +340,8 @@ export default function PoWFaucetPage() {
       return
     }
 
+    const amountMicro = Number.parseFloat(withdrawAmount) * 1e6
+
     try {
       const result = await apiClient.requestWithdrawal(address, amountMicro)
       setStatus(`Withdrawal requested! Net amount: ${result.netAmount / 1e6} tokens`)
