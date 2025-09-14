@@ -514,7 +514,7 @@ export default function PoWFaucetPage() {
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
                 />
-                <div className="text-xs text-muted-foreground">$NF contract: 0xd6521294cf8b18729e6a0e9b0504b25b1b56fed9</div>
+                <div className="text-xs text-muted-foreground">$NF contract: 0xcda13379bd5b6ebd129b126a0163b7da8700c291</div>
               </div>
 
               <Button onClick={requestWithdrawal} className="w-full" variant="secondary">
