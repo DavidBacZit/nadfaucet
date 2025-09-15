@@ -499,7 +499,7 @@ export default function PoWFaucetPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{(balance / 1e6).toFixed(0)}</div>
+                <div className="text-2xl font-bold text-primary">{balance / 1e6}</div>
                 <div className="text-sm text-muted-foreground">$NF</div>
               </div>
 
