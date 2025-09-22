@@ -341,7 +341,7 @@ export default function PoWFaucetPage() {
     }
 
     try {
-      const result = await apiClient.requestWithdrawal(address, 1)
+      const result = await apiClient.requestWithdrawal(address)
       setStatus(`Withdrawal requested! Net amount: ${result.netAmount / 1e6} tokens`)
       setWithdrawAmount("")
       setError("")
@@ -358,7 +358,7 @@ export default function PoWFaucetPage() {
 
 
     try {
-      const result = await apiClient.requestWithdrawalETH(address, 1)
+      const result = await apiClient.requestWithdrawalETH(address)
       setStatus(`Withdrawal requested! Net amount: ${result.netAmount / 1e6} tokens`)
       setWithdrawAmount("")
       setError("")
@@ -374,7 +374,7 @@ export default function PoWFaucetPage() {
     }
 
     try {
-      const result = await apiClient.requestWithdrawalAxoHouse(address, 1)
+      const result = await apiClient.requestWithdrawalAxoHouse(address)
       setStatus(`Withdrawal requested! Net amount: ${result.netAmount / 1e6} tokens`)
       setWithdrawAmount("")
       setError("")
