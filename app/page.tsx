@@ -352,6 +352,42 @@ export default function PoWFaucetPage() {
     }
   }, [address, withdrawAmount, apiClient])
 
+  const requestWithdrawalETH = useCallback(async () => {
+    if (!address) {
+      setError("Please enter address")
+      return
+    }
+
+    const amountMicro = Number.parseFloat(withdrawAmount) * 1e6
+
+    try {
+      const result = await apiClient.requestWithdrawalETH(address, amountMicro)
+      setStatus(`Withdrawal requested! Net amount: ${result.netAmount / 1e6} tokens`)
+      setWithdrawAmount("")
+      setError("")
+    } catch (err: any) {
+      setError(`Withdrawal failed: ${err.message}`)
+    }
+  }, [address, withdrawAmount, apiClient])
+
+    const requestWithdrawalAxoHouse = useCallback(async () => {
+    if (!address) {
+      setError("Please enter address")
+      return
+    }
+
+    const amountMicro = Number.parseFloat(withdrawAmount) * 1e6
+
+    try {
+      const result = await apiClient.requestWithdrawalAxoHouse(address, amountMicro)
+      setStatus(`Withdrawal requested! Net amount: ${result.netAmount / 1e6} tokens`)
+      setWithdrawAmount("")
+      setError("")
+    } catch (err: any) {
+      setError(`Withdrawal failed: ${err.message}`)
+    }
+  }, [address, withdrawAmount, apiClient])
+
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="mx-auto max-w-6xl space-y-6">
