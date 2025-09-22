@@ -335,8 +335,8 @@ export default function PoWFaucetPage() {
 
   // Withdrawal
   const requestWithdrawal = useCallback(async () => {
-    if (!address || !withdrawAmount) {
-      setError("Please enter address and withdrawal amount")
+    if (!address) {
+      setError("Please enter address")
       return
     }
 
@@ -505,20 +505,18 @@ export default function PoWFaucetPage() {
 
               <Separator />
 
-              <div className="space-y-2">
-                <Label htmlFor="withdraw-amount">Withdrawal Amount</Label>
-                <Input
-                  id="withdraw-amount"
-                  type="number"
-                  placeholder="Enter amount..."
-                  value={withdrawAmount}
-                  onChange={(e) => setWithdrawAmount(e.target.value)}
-                />
-                <div className="text-xs text-muted-foreground">$NF contract: 0x99eBa51a7662Ab7F31bf631D2C8785F1832aFdCc</div>
-              </div>
+              <div className="text-xs text-muted-foreground">$NF contract: 0x99eBa51a7662Ab7F31bf631D2C8785F1832aFdCc</div>
 
               <Button onClick={requestWithdrawal} className="w-full" variant="secondary">
-                Request Withdrawal
+                Withdraw $NF
+              </Button>
+              <br></br>
+              <Button onClick={requestWithdrawalETH} className="w-full" variant="secondary">
+                Withdraw $MON
+              </Button>
+              <br></br>
+              <Button onClick={requestWithdrawalAxoHouse} className="w-full" variant="secondary">
+                Withdraw $AxoHouse
               </Button>
             </CardContent>
           </Card>
