@@ -544,15 +544,15 @@ export default function PoWFaucetPage() {
               <div className="text-xs text-muted-foreground">$NF contract: 0x99eBa51a7662Ab7F31bf631D2C8785F1832aFdCc</div>
 
               <Button onClick={requestWithdrawal} className="w-full" variant="secondary">
-                Withdraw $NF
+                Withdraw as $NF
               </Button>
               <br></br>
               <Button onClick={requestWithdrawalETH} className="w-full" variant="secondary">
-                Withdraw $MON
+                Withdraw as $MON
               </Button>
               <br></br>
               <Button onClick={requestWithdrawalAxoHouse} className="w-full" variant="secondary">
-                Withdraw $AxoHouse
+                Withdraw as $AxoHouse
               </Button>
             </CardContent>
           </Card>
