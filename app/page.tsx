@@ -531,15 +531,15 @@ export default function PoWFaucetPage() {
             <CardContent className="space-y-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-primary">{balance / 1e6}</div>
-                <div className="text-sm text-muted-foreground">$NF</div>
+                <div className="text-sm text-muted-foreground">$NFC</div>
               </div>
 
               <Separator />
 
-              <div className="text-xs text-muted-foreground">$NF contract: 0x99eBa51a7662Ab7F31bf631D2C8785F1832aFdCc</div>
+              <div className="text-xs text-muted-foreground">$NFC contract: 0x974ab6c7cB878ff87d0c374F9dFbB3d66fBf9fcC</div>
 
               <Button onClick={requestWithdrawal} className="w-full" variant="secondary">
-                Withdraw as $NF
+                Withdraw as $NFC
               </Button>
               <br></br>
               <Button onClick={requestWithdrawalETH} className="w-full" variant="secondary">
