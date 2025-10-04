@@ -547,7 +547,7 @@ export default function PoWFaucetPage() {
               </Button>
               <br></br>
               <Button onClick={requestWithdrawalAxoHouse} className="w-full" variant="secondary">
-                Withdraw as $AxoHouse
+                Withdraw as $AxoHouse (75% OFF withdraw fees)
               </Button>
             </CardContent>
           </Card>
